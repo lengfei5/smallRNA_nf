@@ -60,15 +60,15 @@ process cutadapt {
     tag "Channel: ${name}"
 
     publishDir "${params.outdir}/cutadapt", mode: 'copy', pattern: '*.err'
-    
+
     input:
         set val(name), file(bam) from read_files
-	
+
     output:
         set name, file("cutadapt.fastq") into fastq_cutadapt
 	set name, file("cutadapt.${name}.err") into stat_cutadapt
 	set name, file("cntTotal.txt") into cnt_total
-	
+
     script:
     """
         PYTHON_EGG_CACHE=`pwd` #cutadapt wants to write into home FIXME
@@ -86,14 +86,14 @@ process cutadapt {
 process trimUMI {
 
     tag "Channel: ${name}"
-  
+
     input:
         set name, file(fastq) from fastq_cutadapt
-	
+
     output:
         set name, file("trimmed.fastq") into fastq_trimmed, fastq_trimmed2
         set name, file("cntTrimmed.txt") into cnt_trimmed
-	
+
     script:
     """
     cat ${fastq} |\
@@ -111,7 +111,7 @@ process buildTailorIndex {
 
     input:
 	file genome from genome_file
-	
+
     output:
         file "index.tailor*" into index_tailor
 
@@ -125,10 +125,10 @@ process buildTailorIndex {
  * Tailor index - contamination
  */
 process buildTailorIndexContamination {
- 
+
     input:
 	file genome from cont_file
-	
+
     output:
         file "index.tailor.cont*" into index_tailor_cont
 
@@ -148,14 +148,14 @@ process buildTailorIndexContamination {
 process alignContamination {
 
     tag "Channel: ${name}"
-  
+
     input:
 	file index from index_tailor_cont
         set name, file(fastq) from fastq_trimmed
-    
+
     output:
         set name, file("contamination.bam") into bam_tailor_cont, bam_tailor_cont2
-	
+
     script:
     """
     if [ -e index.tailor.cont.t_bwt.bwt ]; then
@@ -179,13 +179,13 @@ fastq_trimmed2.phase(bam_tailor_cont)
 process cleanReads {
 
     tag "Channel: ${name}"
-  
+
     input:
         set name, file(fastq), file(bam) from fastq_bam
-	
+
     output:
         set name, file("cleanReads.fastq") into fastq_cleanReads
-    
+
     script:
     """
     if [ -s ${bam} ]; then
@@ -202,11 +202,11 @@ process cleanReads {
 process align {
 
     tag "Channel: ${name}"
-  
+
     input:
 	file index from index_tailor
         set name, file(fastq) from fastq_cleanReads
-    
+
     output:
         set name, file("tailor.bam") into bam_tailor, bam_tailor2
 
@@ -243,19 +243,19 @@ process splitGTF {
 process assignFeat {
 
     tag "Channel: ${name}"
-  
+
     input:
         set name, file(bam) from bam_tailor
 	file gtf from gtf_split
 
     output:
         set name, file("seqCnt.txt") into seq_cnt
-	
+
     script:
     """
     samtools view ${bam} |\
         perl $baseDir/scripts/bam.NH2fraction.pl |\
-        htseq-count -s yes -m intersection-nonempty - ${gtf} -o assign.tmp 
+        htseq-count -s yes -m intersection-nonempty - ${gtf} -o assign.tmp
 
     perl $baseDir/scripts/reduceBam.tailor.umi.pl -g ${gtf} -s assign.tmp |\
         egrep -v no_feature > seqCnt.txt
@@ -270,14 +270,14 @@ process countSimple {
     tag "Channel: ${name}"
 
     publishDir "${params.outdir}/count", mode: 'copy', pattern: '*.count.txt'
-    
+
     input:
 	set name, file(seq_cnt) from seq_cnt
 
     output:
         file "${name}.count.txt" into count
 	set name, file("totalFeatCnt.txt") into cnt_totalFeat
-	
+
     shell:
     '''
     tail -n +2 !{seq_cnt} |\
@@ -311,14 +311,14 @@ cnt_total.concat(cnt_trimmed, bam_tailor_cont2, bam_tailor2, cnt_totalFeat)
 process statTable {
 
         tag "Channel: ${name}"
-	
+
     input:
         set name, file(cnt_total), file(cnt_trimmed), file(bam_tailor_cont), file(bam_tailor), file(cnt_totalFeat) from cntStat_files
-	
+
     output:
         file "${name}.countStat.txt" into cnt_stat
 
-	
+
     script:
     """
     echo -e "Name\tTotal\tPassed trimming\tContamination align\tGenome align\tTotal reads in feature" > ${name}.countStat.txt
@@ -347,7 +347,7 @@ process countTable {
         file "countTable.txt"
 	file "countTable.html"
 	file "countStatTable.txt"
-	
+
     script:
     """
     cp $baseDir/scripts/countTable.Rmd .
@@ -360,5 +360,5 @@ process countTable {
 workflow.onComplete {
     println "Pipeline completed at : $workflow.complete"
     println "Execution status      : ${ workflow.success ? 'OK' : 'failed' }"
-    println "Duration : ${workflow.duration}" 
+    println "Duration : ${workflow.duration}"
 }
