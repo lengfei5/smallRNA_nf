@@ -1,0 +1,1 @@
+find work -type f | egrep -v '\.command'|xargs rm
