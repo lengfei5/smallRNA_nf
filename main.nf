@@ -179,19 +179,20 @@ fastq_trimmed2.phase(bam_tailor_cont)
 process cleanReads {
 
     tag "Channel: ${name}"
+    publishDir "${params.outdir}/cleanReads", mode: 'copy', pattern: '*.fastq'
 
     input:
         set name, file(fastq), file(bam) from fastq_bam
 
     output:
-        set name, file("cleanReads.fastq") into fastq_cleanReads
+        set name, file("${name}.fastq") into fastq_cleanReads
 
     script:
     """
     if [ -s ${bam} ]; then
-        perl ${baseDir}/scripts/extract.unaligned.pl -b ${bam} -f ${fastq} > cleanReads.fastq
+        perl ${baseDir}/scripts/extract.unaligned.pl -b ${bam} -f ${fastq} > ${name}.fastq
     else
-        cp ${fastq} cleanReads.fastq
+        cp ${fastq} ${name}.fastq
     fi
     """
 }
@@ -204,7 +205,7 @@ process align {
     tag "Channel: ${name}"
 
     input:
-	file index from index_tailor
+	      file index from index_tailor
         set name, file(fastq) from fastq_cleanReads
 
     output:
