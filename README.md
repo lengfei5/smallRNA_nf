@@ -1,5 +1,8 @@
 # smallRNA-meth pipeline
 
+This nextflow pipeline is developped by Thomas Burkard at IMP/IMBA
+The current version is v1.03
+
 This pipeline analyzes smallRNA methylation data. It results in a count table.
 
 ## Get pipeline
