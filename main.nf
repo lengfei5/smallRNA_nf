@@ -40,6 +40,7 @@ cont_file       = file(params.contamination)
 genome_file     = file(params.genome)
 gtf_file        = file(params.gtf)
 
+
 /*
  * Validate input files
  */
