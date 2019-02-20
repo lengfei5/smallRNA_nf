@@ -25,8 +25,10 @@ log.info """\
          genome: ${params.genome}
          contamination: ${params.contamination}
          gtf: ${params.gtf}
+         gtfNoSplit: ${params.gtfNoSplit}
          tailFraction: ${params.tailFraction}
          cpus: ${params.cpus}
+         memPerCPUSort: ${params.memPerCPUSort}
          """
          .stripIndent()
 
@@ -43,6 +45,20 @@ gtf_file        = file(params.gtf)
  */
 if( !genome_file.exists() ) exit 1, "Missing genome file: ${genome_file}"
 if( !gtf_file.exists() ) exit 1, "Missing GTF file: ${gtf_file}"
+
+if (params.gtfNoSplit)
+{
+  gtfNoSplit_file = file(params.gtfNoSplit)
+  if( !gtfNoSplit_file.exists() ) exit 1, "GTF (no split) file doesn't exist: ${gtfNoSplit_file}"
+} else {
+  gtfNoSplit_file = file("NA")
+}
+
+if ( (!params.gtf) && (!params.gtfNoSplit))
+{
+  exit 1, "Neither --gtf nor --gtfNoSplit set"
+}
+
 
 /*
  * Create a channel for read files
@@ -217,26 +233,37 @@ process align {
     """
 }
 
+
 /*
  * Split GTF into 2 halfs (5'/3') and create antisense
  */
-process splitGTF {
+process splitAndMergeGTF {
 
     input:
         file gtf from gtf_file
+        file gtfNoSplit from gtfNoSplit_file
 
     output:
-        file "split.gtf" into gtf_split
-	file "split.as.gtf" into gtf_split_as
+        file "splitAndMerged.gtf" into gtf_split
+	      file "splitAndMerged.as.gtf" into gtf_split_as
 
     shell:
     '''
-    perl !{baseDir}/scripts/GTF.splitInHalf.pl !{gtf} > split.gtf
+    if [ "!{gtf}" != "NA" ]; then
+      perl !{baseDir}/scripts/GTF.splitInHalf.pl !{gtf} > split.gtf
+    else
+      touch split.gtf
+    fi
 
-    perl -pe '@c = split "\t"; $c[6] =~ tr/+-/-+/; $c[1].="_AS"; $_=join "\t", @c; s/";/_AS";/g' split.gtf > split.as.gtf
+    if [ "!{gtfNoSplit}" != "NA" ]; then
+      cat split.gtf !{gtfNoSplit} > splitAndMerged.gtf
+    else
+      mv split.gtf splitAndMerged.gtf
+    fi
+
+    perl -pe '@c = split "\t"; $c[6] =~ tr/+-/-+/; $c[1].="_AS"; $_=join "\t", @c; s/";/_AS";/g' splitAndMerged.gtf > splitAndMerged.as.gtf
     '''
 }
-
 
 /*
  * Assign reads to features. Multimappers as fraction of alignments
