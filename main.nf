@@ -308,10 +308,11 @@ process assignFeat {
 
     tag "Channel: ${name}"
 
+    publishDir "${params.outdir}/seqCnt", mode: 'copy', pattern: '*.seqCnt.txt'
+
     input:
         set name, file(bam) from bam_tailor
-	file gtf from gtf_split
-
+	      file gtf from gtf_split
     output:
         set name, file("seqCnt.txt") into seq_cnt
 
@@ -322,6 +323,7 @@ process assignFeat {
 
     egrep -v no_feature assign.tmp > assign2feat.tmp
     perl $baseDir/scripts/reduceBam.tailor.umi.pl -g ${gtf} -s assign2feat.tmp > seqCnt.txt
+    cp seqCnt.txt ${name}.seqCnt.txt
     """
 }
 
@@ -335,16 +337,17 @@ process countSimple {
     publishDir "${params.outdir}/count", mode: 'copy', pattern: '*.count.txt'
 
     input:
-	set name, file(seq_cnt) from seq_cnt
+	      set name, file(seq_cnt) from seq_cnt
 
     output:
         file "${name}.count.txt" into count
-	set name, file("totalFeatCnt.txt") into cnt_totalFeat
+	      set name, file("totalFeatCnt.txt") into cnt_totalFeat
 
     shell:
     '''
     tail -n +2 !{seq_cnt} |\
         awk -vFS="\t" -vOFS="\t" -v CONVFMT="%.17g" -vTF="!{params.tailFraction}" 'BEGIN{print "Name", "GM", "PM", "Total"} {if ((length($10) / length($8)) <= TF) { if ($11 == 0) { GM[$6] = GM[$6] + $12; ID[$6] = 1; } else { PM[$6] = PM[$6] + $12 ; ID[$6] = 1; }}} END{ Total=0; for (name in ID) { Total=Total+GM[name]+PM[name]; printf "%s\\t%.17g\\t%.17g\\t%.17g\\n", name, GM[name], PM[name], GM[name]+PM[name] }; print Total > "totalFeatCnt.txt"}' > !{name}.count.txt
+
     '''
 }
 
