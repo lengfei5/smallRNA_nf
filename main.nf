@@ -25,7 +25,7 @@ log.info """\
          genome: ${params.genome}
          contamination: ${params.contamination}
          gtf: ${params.gtf}
-         gtfNoSplit: ${params.gtfNoSplit}
+         gtfNoSplit: ${params.gtf}
          tailFraction: ${params.tailFraction}
          cpus: ${params.cpus}
          memPerCPUSort: ${params.memPerCPUSort}
@@ -37,15 +37,22 @@ log.info """\
  * Input parameters validation
  */
 cont_file       = file(params.contamination)
-genome_file     = file(params.genome)
-gtf_file        = file(params.gtf)
 
+if (params.genome)
+{
+  genome_file = file(params.genome)
+  if( !genome_file.exists() ) exit 1, "Genome file doesn't exist: ${genome_file}"
+} else {
+  exit 1, "Missing genome file"
+}
 
-/*
- * Validate input files
- */
-if( !genome_file.exists() ) exit 1, "Missing genome file: ${genome_file}"
-if( !gtf_file.exists() ) exit 1, "Missing GTF file: ${gtf_file}"
+if (params.gtf)
+{
+  gtf_file = file(params.gtf)
+  if( !gtf_file.exists() ) exit 1, "GTF file doesn't exist: ${gtf_file}"
+} else {
+  gtf_file = file("NA")
+}
 
 if (params.gtfNoSplit)
 {
@@ -55,10 +62,16 @@ if (params.gtfNoSplit)
   gtfNoSplit_file = file("NA")
 }
 
-if ( (!params.gtf) && (!params.gtfNoSplit))
+if (! (params.gtf && params.gtfNoSplit))
 {
   exit 1, "Neither --gtf nor --gtfNoSplit set"
 }
+
+
+/*
+ * Validate input files
+ */
+
 
 
 /*
@@ -166,6 +179,8 @@ process alignContamination {
 
     tag "Channel: ${name}"
 
+    publishDir "${params.outdir}/contamination", mode: 'copy'
+
     input:
 	file index from index_tailor_cont
         set name, file(fastq) from fastq_trimmed
@@ -196,20 +211,19 @@ fastq_trimmed2.phase(bam_tailor_cont)
 process cleanReads {
 
     tag "Channel: ${name}"
-    publishDir "${params.outdir}/cleanReads", mode: 'copy', pattern: '*.fastq'
 
     input:
         set name, file(fastq), file(bam) from fastq_bam
 
     output:
-        set name, file("${name}.fastq") into fastq_cleanReads
+        set name, file("cleanReads.fastq") into fastq_cleanReads
 
     script:
     """
     if [ -s ${bam} ]; then
-        perl ${baseDir}/scripts/extract.unaligned.pl -b ${bam} -f ${fastq} > ${name}.fastq
+        perl ${baseDir}/scripts/extract.unaligned.pl -b ${bam} -f ${fastq} > cleanReads.fastq
     else
-        cp ${fastq} ${name}.fastq
+        cp ${fastq} cleanReads.fastq
     fi
     """
 }
@@ -222,7 +236,7 @@ process align {
     tag "Channel: ${name}"
 
     input:
-	      file index from index_tailor
+	file index from index_tailor
         set name, file(fastq) from fastq_cleanReads
 
     output:
@@ -230,8 +244,28 @@ process align {
 
     script:
     """
-    tailor_v1.1_linux_static map -i ${fastq} -p index.tailor -l ${params.minAlign} -n ${task.cpus} | samtools view -bS > tailor.bam
+    tailor_v1.1_linux_static map -i ${fastq} -p index.tailor -l ${params.minAlign} -n ${task.cpus} | perl $baseDir/scripts/bam.NH2fraction.pl -m ${params.maxMultialign} | samtools view -bS > tailor.bam
     """
+}
+
+
+/*
+ * Align stat
+ */
+process alignStat {
+
+  tag "Channel: ${name}"
+
+  input:
+  set name, file(bam) from bam_tailor2
+
+  output:
+  set name, file("tailorStat.txt") into tailorStat
+
+  script:
+  """
+  samtools sort -@ ${task.cpus} -n -m ${params.memPerCPUSort} -l 0 ${bam} | samtools view | cut -f 1  | uniq | wc -l > tailorStat.txt
+  """
 }
 
 
@@ -246,7 +280,7 @@ process splitAndMergeGTF {
 
     output:
         file "splitAndMerged.gtf" into gtf_split
-	      file "splitAndMerged.as.gtf" into gtf_split_as
+	file "splitAndMerged.as.gtf" into gtf_split_as
 
     shell:
     '''
@@ -266,6 +300,7 @@ process splitAndMergeGTF {
     '''
 }
 
+
 /*
  * Assign reads to features. Multimappers as fraction of alignments
  */
@@ -283,11 +318,10 @@ process assignFeat {
     script:
     """
     samtools view ${bam} |\
-        perl $baseDir/scripts/bam.NH2fraction.pl |\
         htseq-count -s yes -m intersection-nonempty - ${gtf} -o assign.tmp
 
-    perl $baseDir/scripts/reduceBam.tailor.umi.pl -g ${gtf} -s assign.tmp |\
-        egrep -v no_feature > seqCnt.txt
+    egrep -v no_feature assign.tmp > assign2feat.tmp
+    perl $baseDir/scripts/reduceBam.tailor.umi.pl -g ${gtf} -s assign2feat.tmp > seqCnt.txt
     """
 }
 
@@ -331,7 +365,7 @@ cnt_total.phase(cnt_trimmed)
     .set{cntStat_files}
 */
 // Short form of above
-cnt_total.concat(cnt_trimmed, bam_tailor_cont2, bam_tailor2, cnt_totalFeat)
+cnt_total.concat(cnt_trimmed, bam_tailor_cont2, tailorStat, cnt_totalFeat)
     .groupTuple()
     .map{ stat1, stat2 -> [stat1, stat2[0], stat2[1], stat2[2], stat2[3], stat2[4]] }
     .set{ cntStat_files }
@@ -342,7 +376,7 @@ process statTable {
         tag "Channel: ${name}"
 
     input:
-        set name, file(cnt_total), file(cnt_trimmed), file(bam_tailor_cont), file(bam_tailor), file(cnt_totalFeat) from cntStat_files
+        set name, file(cnt_total), file(cnt_trimmed), file(bam_tailor_cont), file(tailorStat), file(cnt_totalFeat) from cntStat_files
 
     output:
         file "${name}.countStat.txt" into cnt_stat
@@ -354,7 +388,7 @@ process statTable {
     TOTAL=`cat ${cnt_total}`
     TRIMMED=`cat ${cnt_trimmed}`
     CONT=`samtools view ${bam_tailor_cont} | cut -f 1 | sort -u | wc -l`
-    TAILOR=`samtools view ${bam_tailor} | cut -f 1 | sort -u | wc -l`
+    TAILOR=`cat ${tailorStat}`
     FEATURE=`cat ${cnt_totalFeat}`
 
     echo -e "${name}\t\$TOTAL\t\$TRIMMED\t\$CONT\t\$TAILOR\t\$FEATURE" >> ${name}.countStat.txt
