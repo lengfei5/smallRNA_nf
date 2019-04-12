@@ -438,6 +438,6 @@ process countTable {
 
 workflow.onComplete {
     println "Pipeline completed at : $workflow.complete"
-    println "Execution status      : ${ workflow.success ? 'OK' : 'failed' }"
+    println "Execution status      : ${ workflow.success ? 'succeeded' : 'failed' }"
     println "Duration : ${workflow.duration}"
 }
