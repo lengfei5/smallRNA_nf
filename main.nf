@@ -334,7 +334,7 @@ process countSimple {
 
     tag "Channel: ${name}"
 
-    publishDir "${params.outdir}/count", mode: 'copy', pattern: '*.count.txt'
+    publishDir "${params.outdir}/count", mode: 'copy', pattern: '*count.txt'
 
     input:
 	      set name, file(seq_cnt) from seq_cnt
@@ -346,8 +346,20 @@ process countSimple {
     shell:
     '''
     tail -n +2 !{seq_cnt} |\
-        awk -vFS="\t" -vOFS="\t" -v CONVFMT="%.17g" -vTF="!{params.tailFraction}" 'BEGIN{print "Name", "GM", "PM", "Total"} {if ((length($10) / length($8)) <= TF) { if ($11 == 0) { GM[$6] = GM[$6] + $12; ID[$6] = 1; } else { PM[$6] = PM[$6] + $12 ; ID[$6] = 1; }}} END{ Total=0; for (name in ID) { Total=Total+GM[name]+PM[name]; printf "%s\\t%.17g\\t%.17g\\t%.17g\\n", name, GM[name], PM[name], GM[name]+PM[name] }; print Total > "totalFeatCnt.txt"}' > !{name}.count.txt
-
+        awk -vFS="\t" -vOFS="\t" -v CONVFMT="%.17g" -vTF="!{params.tailFraction}" \
+        'BEGIN{print "Name", "GM", "PM", "Total", "GM.UMInum", "PM.UMInum", "Total.UMInum", "GM.UMIfr", "PM.UMIfr", "Total.UMIfr"} \
+        {if ((length($10) / length($8)) <= TF) \
+          { if ($11 == 0) { GM[$6] = GM[$6] + $12; GMumiNum[$6] = GMumiNum[$6] + $13; GMumiFr[$6] = GMumiFr[$6] + $14; \
+          ID[$6] = 1; } \
+            else { PM[$6] = PM[$6] + $12 ; PMumiNum[$6] = PMumiNum[$6] + $13; PMumiFr[$6] = PMumiFr[$6] + $14; \
+            ID[$6] = 1; } \
+          } \
+        } \
+        END{ Total=0; TotalUmiNum=0; TotalUmiFr=0; for (name in ID) \
+        { Total=Total+GM[name]+PM[name];
+        printf "%s\\t%.17g\\t%.17g\\t%.17g\\t%.17g\\t%.17g\\t%.17g\\t%.17g\\t%.17g\\t%.17g\\n", \
+        name, GM[name], PM[name], GM[name]+PM[name], GMumiNum[name], PMumiNum[name], GMumiNum[name]+PMumiNum[name], GMumiFr[name], PMumiFr[name], GMumiFr[name]+PMumiFr[name]}; \
+        print Total > "totalFeatCnt.txt"}' > !{name}.count.txt
     '''
 }
 
@@ -393,7 +405,7 @@ process statTable {
     CONT=`samtools view ${bam_tailor_cont} | cut -f 1 | sort -u | wc -l`
     TAILOR=`cat ${tailorStat}`
     FEATURE=`cat ${cnt_totalFeat}`
-
+    
     echo -e "${name}\t\$TOTAL\t\$TRIMMED\t\$CONT\t\$TAILOR\t\$FEATURE" >> ${name}.countStat.txt
     """
 }
