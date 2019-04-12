@@ -96,8 +96,8 @@ process cutadapt {
 
     output:
         set name, file("cutadapt.fastq") into fastq_cutadapt
-	set name, file("cutadapt.${name}.err") into stat_cutadapt
-	set name, file("cntTotal.txt") into cnt_total
+	      set name, file("cutadapt.${name}.err") into stat_cutadapt
+	      set name, file("cntTotal.txt") into cnt_total
 
     script:
     """
@@ -182,11 +182,11 @@ process alignContamination {
     publishDir "${params.outdir}/contamination", mode: 'copy'
 
     input:
-	file index from index_tailor_cont
-        set name, file(fastq) from fastq_trimmed
+      file index from index_tailor_cont
+      set name, file(fastq) from fastq_trimmed
 
     output:
-        set name, file("contamination.bam") into bam_tailor_cont, bam_tailor_cont2
+      set name, file("contamination.bam") into bam_tailor_cont, bam_tailor_cont2
 
     script:
     """
@@ -405,7 +405,7 @@ process statTable {
     CONT=`samtools view ${bam_tailor_cont} | cut -f 1 | sort -u | wc -l`
     TAILOR=`cat ${tailorStat}`
     FEATURE=`cat ${cnt_totalFeat}`
-    
+
     echo -e "${name}\t\$TOTAL\t\$TRIMMED\t\$CONT\t\$TAILOR\t\$FEATURE" >> ${name}.countStat.txt
     """
 }
@@ -419,7 +419,7 @@ process countTable {
 
     input:
         file "count/*" from count.collect()
-	file "countStat/*" from cnt_stat.collect()
+	      file "countStat/*" from cnt_stat.collect()
 
     output:
         file "countTable.txt"
