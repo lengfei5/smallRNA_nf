@@ -423,12 +423,13 @@ process countTable {
 
     output:
         file "countTable.txt"
-	file "countTable.html"
-	file "countStatTable.txt"
+	      file "countTable.html"
+	      file "countStatTable.txt"
 
     script:
     """
-    cp $baseDir/scripts/countTable.Rmd .
+    cp $baseDir/scripts/countTable_UMI.Rmd ./countTable.Rmd
+
     R --slave -e "rmarkdown::render('countTable.Rmd')"
     """
 }
