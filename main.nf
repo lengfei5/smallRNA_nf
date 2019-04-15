@@ -157,10 +157,10 @@ process buildTailorIndex {
 process buildTailorIndexContamination {
 
     input:
-	file genome from cont_file
+	   file genome from cont_file
 
     output:
-        file "index.tailor.cont*" into index_tailor_cont
+     file "index.tailor.cont*" into index_tailor_cont
 
     script:
     """
@@ -236,11 +236,11 @@ process align {
     tag "Channel: ${name}"
 
     input:
-	file index from index_tailor
-        set name, file(fastq) from fastq_cleanReads
+	   file index from index_tailor
+     set name, file(fastq) from fastq_cleanReads
 
     output:
-        set name, file("tailor.bam") into bam_tailor, bam_tailor2
+      set name, file("tailor.bam") into bam_tailor, bam_tailor2
 
     script:
     """
@@ -315,6 +315,7 @@ process assignFeat {
 	      file gtf from gtf_split
     output:
         set name, file("seqCnt.txt") into seq_cnt
+        file "${name}.seqCnt.txt"
 
     script:
     """
@@ -324,6 +325,7 @@ process assignFeat {
     egrep -v no_feature assign.tmp > assign2feat.tmp
     perl $baseDir/scripts/reduceBam.tailor.umi.pl -g ${gtf} -s assign2feat.tmp > seqCnt.txt
     cp seqCnt.txt ${name}.seqCnt.txt
+
     """
 }
 
