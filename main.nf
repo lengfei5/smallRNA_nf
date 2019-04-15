@@ -24,6 +24,7 @@ log.info """\
          minAlign: ${params.minAlign}
          genome: ${params.genome}
          contamination: ${params.contamination}
+         spikeIn: ${params.spikeIn}
          gtf: ${params.gtf}
          gtfNoSplit: ${params.gtf}
          tailFraction: ${params.tailFraction}
@@ -37,6 +38,11 @@ log.info """\
  * Input parameters validation
  */
 cont_file       = file(params.contamination)
+if (params.spikeIn)
+{
+  spikeIn_file = file(params.spikeIn)
+  //if( spikeIn_file.exists() ) println " spikeIn "
+}
 
 if (params.genome)
 {
@@ -121,7 +127,7 @@ process trimUMI {
         set name, file(fastq) from fastq_cutadapt
 
     output:
-        set name, file("trimmed.fastq") into fastq_trimmed, fastq_trimmed2
+        set name, file("trimmed.fastq") into fastq_trimmed, fastq_trimmed2, fastq_for_spike
         set name, file("cntTrimmed.txt") into cnt_trimmed
 
     script:
@@ -135,15 +141,127 @@ process trimUMI {
 }
 
 /*
+ * Trim spike in
+ */
+process trimSpike {
+
+    tag "Channel: ${name}"
+
+    when:
+    spikeIn_file.exists()
+
+    input:
+        set name, file(fastq) from fastq_for_spike
+
+    output:
+        set name, file("spike.fastq") into fastq_spike
+        //set name, file("cntTrimmed.txt") into cnt_trimmed
+
+    script:
+    """
+    cat ${fastq} |\
+        paste - - - - |\
+        perl ${baseDir}/scripts/trim.pl -m 13 -M 13 > spike.fastq
+
+    """
+}
+/*
+ * Tailor index - spikeIn
+ */
+process buildTailorIndexSpikeIn {
+
+    when:
+    spikeIn_file.exists()
+
+    input:
+	   file genome from spikeIn_file
+
+    output:
+     file "index.tailor.spike*" into index_tailor_spikeIn
+
+    script:
+    """
+    tailor_v1.1_linux_static build -i ${genome} -p index.tailor.spike
+
+    """
+}
+/*
+ * Align spike in with tailor
+ */
+process alignSpike {
+
+    tag "Channel: ${name}"
+    publishDir "${params.outdir}/spikeIns", mode: 'copy', pattern: '*.spike.bam'
+
+    when:
+    spikeIn_file.exists()
+
+    input:
+      file index from index_tailor_spikeIn
+      set name, file(fastq) from fastq_spike
+
+    output:
+      set name, file("spike.bam") into bam_tailor_spike, bam_tailor_spike2
+      file "${name}.spike.bam"
+
+    script:
+    """
+    if [ -e index.tailor.spike.t_bwt.bwt ]; then
+        tailor_v1.1_linux_static map -i ${fastq} -p index.tailor.spike -l 13 -n ${task.cpus} | samtools view -bS > spike.bam
+    else
+        touch spike.bam
+    fi
+    cp spike.bam ${name}.spike.bam
+
+    """
+}
+/*
+ * count reads and UMI for spike ins
+ */
+ process countSpike {
+    tag "Channel: ${name}"
+    publishDir "${params.outdir}/spikeIns", mode: 'copy', pattern: '*.txt'
+
+    when:
+    spikeIn_file.exists()
+
+    input:
+    set name, file(spike_bam) from bam_tailor_spike
+
+    output:
+    file "${name}.*.txt" into spikecount
+
+    script:
+    """
+    echo spikeIn_{1..8} spikeIn_{1..8}.UMI |tr ' ' '\t' > ${name}.count.txt
+    count=''
+    umi=''
+
+    for 'seq' in Spike_in_X{1..8}
+    do
+        cc=`samtools view ${spike_bam} | grep ${seq} | wc -l`
+        uu=`samtools view ${spike_bam} | grep ${seq} | cut -f1|tr '_' '\t'|cut -f2,3|tr '\t' '_'|sort -u |wc -l`
+        count="${count} ${cc}"
+        umi="${umi} ${uu}"
+    done
+
+    echo ${count} ${umi} | tr ' ' '\t' >> ${name}.count.txt
+
+    """
+
+ }
+
+
+/*
  * Tailor index
  */
 process buildTailorIndex {
 
     input:
-	file genome from genome_file
+	    file genome from genome_file
 
     output:
-        file "index.tailor*" into index_tailor
+      file "index.tailor*" into index_tailor
 
     script:
     """
@@ -172,14 +290,13 @@ process buildTailorIndexContamination {
     """
 }
 
+
 /*
  * Align with tailor to contamination
  */
 process alignContamination {
 
     tag "Channel: ${name}"
-
-    publishDir "${params.outdir}/contamination", mode: 'copy'
 
     input:
       file index from index_tailor_cont
