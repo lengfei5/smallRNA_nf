@@ -220,7 +220,7 @@ process alignSpike {
  */
  process countSpike {
     tag "Channel: ${name}"
-    publishDir "${params.outdir}/spikeIns", mode: 'copy', pattern: '*.txt'
+    publishDir "${params.outdir}/spikeIns", mode: 'copy', pattern: '*spikeIn.txt'
 
     when:
     spikeIn_file.exists()
@@ -229,28 +229,14 @@ process alignSpike {
     set name, file(spike_bam) from bam_tailor_spike
 
     output:
-    file "${name}.*.txt" into spikecount
+    file "${name}.spikeIn.txt" into spike_count
 
     script:
     """
-    echo spikeIn_{1..8} spikeIn_{1..8}.UMI |tr ' ' '\t' > ${name}.count.txt
-    count=''
-    umi=''
-
-    for 'seq' in Spike_in_X{1..8}
-    do
-        cc=`samtools view ${spike_bam} | grep ${seq} | wc -l`
-        uu=`samtools view ${spike_bam} | grep ${seq} | cut -f1|tr '_' '\t'|cut -f2,3|tr '\t' '_'|sort -u |wc -l`
-        count="${count} ${cc}"
-        umi="${umi} ${uu}"
-    done
-
-    echo ${count} ${umi} | tr ' ' '\t' >> ${name}.count.txt
-
+    bash ${baseDir}/scripts/countSpikeIn.sh ${spike_bam} > ${name}.spikeIn.txt
     """
 
  }
-
 
 /*
  * Tailor index
@@ -507,7 +493,7 @@ cnt_total.concat(cnt_trimmed, bam_tailor_cont2, tailorStat, cnt_totalFeat)
 
 process statTable {
 
-        tag "Channel: ${name}"
+    tag "Channel: ${name}"
 
     input:
         set name, file(cnt_total), file(cnt_trimmed), file(bam_tailor_cont), file(tailorStat), file(cnt_totalFeat) from cntStat_files
@@ -538,21 +524,21 @@ process countTable {
 
     input:
         file "count/*" from count.collect()
+        file "spikeIn/*" from spike_count.collect()
 	      file "countStat/*" from cnt_stat.collect()
 
     output:
         file "countTable.txt"
+        file "spikeInTable.txt"
 	      file "countTable.html"
 	      file "countStatTable.txt"
 
     script:
     """
     cp $baseDir/scripts/countTable_UMI.Rmd ./countTable.Rmd
-
     R --slave -e "rmarkdown::render('countTable.Rmd')"
     """
 }
-
 
 
 workflow.onComplete {
