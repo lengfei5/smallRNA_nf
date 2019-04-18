@@ -537,6 +537,7 @@ process countTable {
     """
     cp $baseDir/scripts/countTable_UMI.Rmd ./countTable.Rmd
     R --slave -e "rmarkdown::render('countTable.Rmd')"
+
     """
 }
 
