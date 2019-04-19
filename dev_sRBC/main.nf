@@ -38,6 +38,7 @@ log.info """\
  * Input parameters validation
  */
 cont_file       = file(params.contamination)
+
 if (params.spikeIn)
 {
   spikeIn_file = file(params.spikeIn)
@@ -79,7 +80,6 @@ if (! (params.gtf && params.gtfNoSplit))
  */
 
 
-
 /*
  * Create a channel for read files
  */
@@ -94,8 +94,6 @@ Channel
  */
 process cutadapt {
     tag "Channel: ${name}"
-
-    publishDir "${params.outdir}/cutadapt", mode: 'copy', pattern: '*.err'
 
     input:
         set val(name), file(bam) from read_files
@@ -113,6 +111,7 @@ process cutadapt {
         samtools view -c ${bam} > cntTotal.txt
         bamToFastq -i ${bam} -fq /dev/stdout |\
             cutadapt -e ${params.adapterER} -a ${params.adapter} -f fastq -o cutadapt.fastq - > cutadapt.${name}.err
+
     """
 }
 
