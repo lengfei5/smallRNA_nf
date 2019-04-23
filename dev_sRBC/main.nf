@@ -115,6 +115,10 @@ process cutadapt {
     """
 }
 
+
+
+
+
 /*
  * Trim random nucleotides (UMI)
  */
@@ -123,7 +127,7 @@ process trimUMI {
     tag "Channel: ${name}"
 
     input:
-        set name, file(fastq) from fastq_cutadapt
+        set name, file(fastq) from fastq_demultiplexed
 
     output:
         set name, file("trimmed.fastq") into fastq_trimmed, fastq_trimmed2, fastq_for_spike
