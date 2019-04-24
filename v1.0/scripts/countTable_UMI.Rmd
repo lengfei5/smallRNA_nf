@@ -1,0 +1,85 @@
+---
+title: Small RNA-seq
+date:
+author: Thomas R Burkard
+output:
+  html_document:
+    theme: united
+    highlight: haddock
+    code_folding: hide
+    toc: true
+    number_sections: true
+    toc_depth: 3
+    toc_float: true
+---
+
+# Merge read and UMI count files
+
+```{r mergeCnt}
+cnt.files <- list.files(path = "count", pattern = "*.count.txt", full.names = TRUE)
+cnt.files
+
+tables <- lapply(cnt.files, function(f) {
+    tmp <- read.delim(f)
+    rownames(tmp) <- tmp$Name
+    id <- rownames(tmp)
+    id2 <- rownames(tmp)
+    id2 <- gsub("-5p$", "-Threep", id2)
+    id2 <- gsub("-3p$", "-5p", id2)
+    id2 <- gsub("-Threep", "-3p", id2)
+    tmp <- cbind(tmp, miR=tmp[id, "Total"] > tmp[id2, "Total"] | is.na(tmp[id, "Total"] > tmp[id2, "Total"]))
+    name <- sub("count/(.*).trimmed.clean.seqCnt.count.txt", "\\1", f)
+    colnames(tmp) <- c("Name", paste0(c("GM", "PM", "Total", "miR", "GM.UMInum", "PM.UMInum", "Total.UMInum", "GM.UMIfr", "PM.UMIfr", "Total.UMIfr"), ".", name))
+    return(tmp)
+})
+
+cnt.table <- Reduce(function(dtf1, dtf2) merge(dtf1, dtf2, by = "Name", all = TRUE), tables)
+
+write.table(cnt.table, file = "countTable.txt", sep = "\t", quote = F, row.names = F)
+
+```
+
+# Merge spike-in read and UMI count files
+```{r mergeSpikeIn}
+spike.files <- list.files(path = "spikeIn", pattern = "*.spikeIn.txt", full.names = TRUE)
+spike.files
+
+spike.tables <- lapply(spike.files, function(f) {
+  tmp <- read.delim(f, header = TRUE)
+  tmp = t(tmp)
+  id <- rownames(tmp)[1:8]
+  tmp1 = tmp[c(1:8), ]
+  tmp2 = tmp[c(9:16), ]
+  names(tmp1) = id
+  names(tmp2) = id
+  #tmp = cbind(id, t(tmp[1, c(1:8)]), t(tmp[1, -c(1:8)))
+  tmp = data.frame(id, tmp1, tmp2, stringsAsFactors = FALSE)
+
+  name <- sub("count/(.*).trimmed.clean.seqCnt.count.txt", "\\1", f)
+  colnames(tmp) <- c("Name", paste0(c("Total", "Total.UMI"), ".", name))
+  return(tmp)
+})
+
+spike <- Reduce(function(dtf1, dtf2) merge(dtf1, dtf2, by = "Name", all = TRUE), spike.tables)
+write.table(spike, file = "spikeInTable.txt", sep = "\t", quote = F, row.names = F)
+spike
+
+```
+
+# Merge count statistics
+
+```{r mergeCntStat}
+cntStat.files <- list.files(path = "countStat", pattern = "*.countStat.txt", full.names = TRUE)
+cntStat.tables <- lapply(cntStat.files, read.delim)
+cntStat <- Reduce('rbind', cntStat.tables)
+
+write.table(cntStat, file = "countStatTable.txt", sep = "\t", quote = F, row.names = F)
+cntStat
+```
+
+
+# Session info
+
+```{r sessionInfo}
+sessionInfo()
+```

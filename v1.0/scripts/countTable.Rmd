@@ -1,0 +1,58 @@
+---
+title: Small RNA-seq
+date:
+author: Thomas R Burkard
+output:
+  html_document:
+    theme: united
+    highlight: haddock
+    code_folding: hide
+    toc: true
+    number_sections: true
+    toc_depth: 3
+    toc_float: true
+---
+
+# Merge count files
+
+```{r mergeCnt}
+cnt.files <- list.files(path = "count", pattern = "*.count.txt", full.names = TRUE)
+cnt.files
+
+tables <- lapply(cnt.files, function(f) {
+    tmp <- read.delim(f)
+    rownames(tmp) <- tmp$Name
+    id <- rownames(tmp)
+    id2 <- rownames(tmp)
+    id2 <- gsub("-5p$", "-Threep", id2)
+    id2 <- gsub("-3p$", "-5p", id2)
+    id2 <- gsub("-Threep", "-3p", id2)
+    tmp <- cbind(tmp, miR=tmp[id, "Total"] > tmp[id2, "Total"] | is.na(tmp[id, "Total"] > tmp[id2, "Total"]))
+    name <- sub("count/(.*).trimmed.clean.seqCnt.count.txt", "\\1", f)
+    colnames(tmp) <- c("Name", paste0(c("GM", "PM", "Total", "miR"), ".", name))
+    return(tmp)
+})
+
+cnt.table <- Reduce(function(dtf1, dtf2) merge(dtf1, dtf2, by = "Name", all = TRUE), tables)
+
+write.table(cnt.table, file = "countTable.txt", sep = "\t", quote = F, row.names = F)
+
+```
+
+# Merge count statistics
+
+```{r mergeCntStat}
+cntStat.files <- list.files(path = "countStat", pattern = "*.countStat.txt", full.names = TRUE)
+cntStat.tables <- lapply(cntStat.files, read.delim)
+cntStat <- Reduce('rbind', cntStat.tables)
+
+write.table(cntStat, file = "countStatTable.txt", sep = "\t", quote = F, row.names = F)
+cntStat
+```
+
+
+# Session info
+
+```{r sessionInfo}
+sessionInfo()
+```
