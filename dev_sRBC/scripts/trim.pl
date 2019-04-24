@@ -6,13 +6,19 @@ Getopt::Long::Configure ("bundling"); #allow case sensitive!
 
 my $minLength=0;
 my $maxLength=-1;
+my $trim5=0; #random 5' length
+my $trim3=0; #random 3' length
 
 #min/max sequence length
 GetOptions('m:f' => \$minLength,
-	   'M:f' => \$maxLength);
+	   'M:f' => \$maxLength,
+           '5:f' => \$trim5,
+           '3:f' => \$trim3);
 
 print STDERR "Min. length: $minLength\n";
 print STDERR "Max. length: $maxLength\n";
+print STDERR "Random 5' length: $trim5\m";
+print STDERR "Random 3' length: $trim3\m";
 
 # trim random 4mer at 5' and 3'
 sub trim53 {
@@ -20,13 +26,20 @@ sub trim53 {
     my @fqEntry = split "\t", $fastq;
 
     my $fqTrimmed = "";
-    if (length($fqEntry[1]) >= 8) #else shorter than random 2x4-mers
+    if (length($fqEntry[1]) >= ($trim5+$trim3)) #else shorter than random regions
     {
 	#extract UMI & sequence
 	my $umi=$fqEntry[1]; 
-	$umi=~s/(....).*(....)/\1\2/; 
-	$fqEntry[1]=~s/....(.*)..../\1/; #sequence
-	$fqEntry[3]=~s/....(.*)..../\1/; #quality
+	if ($trim3 == 0)
+        {
+            $umi=substr($umi, 0, $trim5);
+            $fqEntry[1]=substr($fqEntry[1], $trim5); #sequence
+            $fqEntry[3]=substr($fqEntry[3], $trim5); #quality
+        } else {
+            $umi=substr($umi, 0, $trim5) . substr($umi, -$trim3);
+            $fqEntry[1]=substr($fqEntry[1], $trim5, -$trim3); #sequence
+            $fqEntry[3]=substr($fqEntry[3], $trim5, -$trim3); #quality
+        }
 	$fqEntry[0].="_UMI:$umi"; #id
 	$fqTrimmed=join "\n", @fqEntry; 
 	$fqTrimmed.="\n";

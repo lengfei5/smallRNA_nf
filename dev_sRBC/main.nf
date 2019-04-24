@@ -20,6 +20,8 @@ log.info """\
          adapter: ${params.adapter}
          barcodes:${params.barcodes}
          adapterER: ${params.adapterER}
+         trim5: ${params.trim5}
+         trim3: ${params.trim3}
          minLength: ${params.minLength}
          maxLength: ${params.maxLength}
          minAlign: ${params.minAlign}
@@ -188,7 +190,7 @@ process trimUMI {
     """
     cat ${fastq} |\
         paste - - - - |\
-        perl ${baseDir}/scripts/trim.pl -m ${params.minLength} -M ${params.maxLength} > trimmed.fastq
+        perl ${baseDir}/scripts/trim.pl -m ${params.minLength} -M ${params.maxLength} -5 ${params.trim5} -3 ${params.trim3} > trimmed.fastq
 
     cat trimmed.fastq | paste - - - - | wc -l > cntTrimmed.txt
     """
