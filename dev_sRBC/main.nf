@@ -99,6 +99,8 @@ Channel
 process cutadapt {
     tag "Channel: ${name}"
 
+    publishDir "${params.outdir}/cutadapt", mode: 'copy'
+
     input:
         set val(name), file(bam) from read_files
 
@@ -131,7 +133,6 @@ process fastq_sRBC_demultiplex {
   input:
     file bc_file from bc_file
     set name, file(fastq) from fastq_cutadapt
-
 
   output:
     set name, file("*.fastq") into fastq_split
