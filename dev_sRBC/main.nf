@@ -18,6 +18,7 @@ log.info """\
          outdir: ${params.outdir}
          reads: ${params.reads}
          adapter: ${params.adapter}
+         barcodes:${params.barcodes}
          adapterER: ${params.adapterER}
          minLength: ${params.minLength}
          maxLength: ${params.maxLength}
@@ -38,6 +39,7 @@ log.info """\
  * Input parameters validation
  */
 cont_file       = file(params.contamination)
+bc_file         = file(params.barcodes)
 
 if (params.spikeIn)
 {
@@ -115,8 +117,57 @@ process cutadapt {
     """
 }
 
+/*
+* using the sRBC barcodes to demultiplex or verify samples
+*/
+process fastq_sRBC_demultiplex {
+
+  tag "Channel: ${name}"
+
+  publishDir "${params.outdir}/fastq_demultiplex_sRBC", mode: 'copy'
+
+  input:
+    file bc_file from bc_file
+    set name, file(fastq) from fastq_cutadapt
 
 
+  output:
+    set name, file("*.fastq") into fastq_split
+    set name, file("${name}.cnt_sRBC_demul.txt") into cnt_sRBC_split
+
+  shell:
+  '''
+    cat !{fastq} | fastx_barcode_splitter.pl --bcfile !{bc_file} --eol --exact --prefix !{name}_ --suffix .fastq
+    cat !{fastq} | paste - - - - | wc -l > !{name}.cnt_sRBC_demul.txt
+    cat $(ls *.fastq |grep unmatched) paste - - - - | wc -l >> !{name}.cnt_sRBC_demul.txt
+    rm $(ls *.fastq |grep unmatched)
+
+  '''
+}
+
+
+process fastq_sRBC_trim {
+
+    tag "Channel: ${name}"
+
+    publishDir "${params.outdir}/fastq_sRBC_trim", mode: 'copy'
+
+    input:
+    set name, file(fastq) from fastq_split
+
+    output:
+    set name, file("${name}.srbcTrim.err") into stat_srbcTrim
+    set name, file("*.fastq") into fastq_bc_splitTrimmed
+
+    script:
+    """
+    PYTHON_EGG_CACHE=`pwd` #cutadapt wants to write into home FIXME
+    export PYTHON_EGG_CACHE
+
+    cutadapt -u -5 --minimum-length 20 -f fastq -o ${name}_srbc_trim.fastq ${fastq} > ${name}.srbcTrim.err
+
+    """
+}
 
 
 /*
@@ -127,7 +178,7 @@ process trimUMI {
     tag "Channel: ${name}"
 
     input:
-        set name, file(fastq) from fastq_demultiplexed
+        set name, file(fastq) from fastq_bc_splitTrimmed
 
     output:
         set name, file("trimmed.fastq") into fastq_trimmed, fastq_trimmed2, fastq_for_spike
