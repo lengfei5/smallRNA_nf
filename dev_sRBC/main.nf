@@ -78,7 +78,6 @@ if (! (params.gtf && params.gtfNoSplit))
   exit 1, "Neither --gtf nor --gtfNoSplit set"
 }
 
-
 /*
  * Validate input files
  */
@@ -116,7 +115,7 @@ process cutadapt {
 
         samtools view -c ${bam} > cntTotal.txt
         bamToFastq -i ${bam} -fq /dev/stdout |\
-            cutadapt -e ${params.adapterER} -a ${params.adapter} -f fastq -o cutadapt.fastq - > cutadapt.${name}.err
+            cutadapt -e ${params.adapterER} --overlap 5 --minimum-length 30 --discard-untrimmed -a ${params.adapter} -f fastq -o cutadapt.fastq - > cutadapt.${name}.err
     """
 }
 
