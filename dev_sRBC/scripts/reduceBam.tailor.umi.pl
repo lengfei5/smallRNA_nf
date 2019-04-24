@@ -183,7 +183,7 @@ foreach my $chrom (sort keys %$chromosome)
 					    $gn = $fbgn;
 					}
 					
-					my $umiNum = keys {$seq->{$chr}->{$pos}->{$end}->{$strand}->{$fbgn}->{$repeat}->{$tail}->{$s}->{"umi"}};
+					my $umiNum = keys %{$seq->{$chr}->{$pos}->{$end}->{$strand}->{$fbgn}->{$repeat}->{$tail}->{$s}->{"umi"}};
 					my $UMIfr = 0;
 					foreach my $umi (keys %{$seq->{$chr}->{$pos}->{$end}->{$strand}->{$fbgn}->{$repeat}->{$tail}->{$s}->{"umi"}})
 					{
