@@ -12,13 +12,13 @@ my $trim3=0; #random 3' length
 #min/max sequence length
 GetOptions('m:f' => \$minLength,
 	   'M:f' => \$maxLength,
-           'trim5:f' => \$trim5,
-           'trim3:f' => \$trim3);
+           '5:f' => \$trim5,
+           '3:f' => \$trim3);
 
 print STDERR "Min. length: $minLength\n";
 print STDERR "Max. length: $maxLength\n";
-print STDERR "Random 5' length: $trim5\m";
-print STDERR "Random 3' length: $trim3\m";
+print STDERR "Random 5' length: $trim5\n";
+print STDERR "Random 3' length: $trim3\n";
 
 # trim random 4mer at 5' and 3'
 sub trim53 {
