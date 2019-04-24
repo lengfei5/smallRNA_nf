@@ -145,6 +145,8 @@ process fastq_sRBC_demultiplex {
   '''
 }
 
+
+
 process fastq_sRBC_trim {
 
     tag "Channel: ${name}"
