@@ -98,7 +98,7 @@ Channel
 process cutadapt {
     tag "Channel: ${name}"
 
-    publishDir "${params.outdir}/cutadapt", mode: 'copy'
+    publishDir "${params.outdir}/cutadapt", mode: 'copy', pattern: '*.err'
 
     input:
         set val(name), file(bam) from read_files
@@ -163,7 +163,7 @@ process fastq_sRBC_trim {
     PYTHON_EGG_CACHE=`pwd` #cutadapt wants to write into home FIXME
     export PYTHON_EGG_CACHE
 
-    cutadapt -u -5 --minimum-length 20 -f fastq -o ${name}_srbc_trim.fastq ${fastq} > ${name}_srbcTrim.err
+    cutadapt -u -5 --minimum-length 28 -f fastq -o ${name}_srbc_trim.fastq ${fastq} > ${name}_srbcTrim.err
     """
 }
 
@@ -187,11 +187,13 @@ process trimUMI {
     """
     cat ${fastq} |\
         paste - - - - |\
-        perl ${baseDir}/scripts/trim.pl -m ${params.minLength} -M ${params.maxLength} -trim5 ${params.trim5} -trim3 ${params.trim3} > trimmed.fastq
+        perl ${baseDir}/scripts/trim.pl -m ${params.minLength} -M ${params.maxLength} -5 ${params.trim5} -3 ${params.trim3} > trimmed.fastq
 
     cat trimmed.fastq | paste - - - - | wc -l > cntTrimmed.txt
     """
 }
+
+
 
 /*
  * Trim spike in
@@ -214,7 +216,7 @@ process trimSpike {
     """
     cat ${fastq} |\
         paste - - - - |\
-        perl ${baseDir}/scripts/trim.pl -m 13 -M 13 -trim5 4 -trim3 4 > spike.fastq
+        perl ${baseDir}/scripts/trim.pl -m 13 -M 13 -5 4 -3 4 > spike.fastq
 
     """
 }
@@ -273,7 +275,7 @@ process alignSpike {
  */
  process countSpike {
     tag "Channel: ${name}"
-    publishDir "${params.outdir}/spikeIns", mode: 'copy', pattern: '*spikeIn.txt'
+    publishDir "${params.outdir}/spikeIns", mode: 'copy', pattern: '*.spikeIn.txt'
 
     when:
     spikeIn_file.exists()
@@ -436,7 +438,7 @@ process splitAndMergeGTF {
 
     output:
         file "splitAndMerged.gtf" into gtf_split
-	file "splitAndMerged.as.gtf" into gtf_split_as
+	      file "splitAndMerged.as.gtf" into gtf_split_as
 
     shell:
     '''
