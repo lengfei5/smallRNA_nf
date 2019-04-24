@@ -12,8 +12,8 @@ my $trim3=0; #random 3' length
 #min/max sequence length
 GetOptions('m:f' => \$minLength,
 	   'M:f' => \$maxLength,
-           '5:f' => \$trim5,
-           '3:f' => \$trim3);
+           'trim5:f' => \$trim5,
+           'trim3:f' => \$trim3);
 
 print STDERR "Min. length: $minLength\n";
 print STDERR "Max. length: $maxLength\n";
@@ -29,7 +29,7 @@ sub trim53 {
     if (length($fqEntry[1]) >= ($trim5+$trim3)) #else shorter than random regions
     {
 	#extract UMI & sequence
-	my $umi=$fqEntry[1]; 
+	my $umi=$fqEntry[1];
 	if ($trim3 == 0)
         {
             $umi=substr($umi, 0, $trim5);
@@ -41,9 +41,9 @@ sub trim53 {
             $fqEntry[3]=substr($fqEntry[3], $trim5, -$trim3); #quality
         }
 	$fqEntry[0].="_UMI:$umi"; #id
-	$fqTrimmed=join "\n", @fqEntry; 
+	$fqTrimmed=join "\n", @fqEntry;
 	$fqTrimmed.="\n";
-    } 
+    }
 
     return($fqTrimmed);
 }
@@ -53,7 +53,7 @@ sub checkLength {
 
     my ($fqTrimmed) = @_;
     my @fqEntry = split "\n", $fqTrimmed;
-    
+
     my $seq = $fqEntry[1];
     if (length($seq) >= $minLength)
     {
@@ -61,9 +61,9 @@ sub checkLength {
 	{
 	    print "$fqTrimmed";
 	}
-    }   
+    }
 }
-    
+
 #main
 while (<>)
 {

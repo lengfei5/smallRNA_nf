@@ -117,7 +117,6 @@ process cutadapt {
         samtools view -c ${bam} > cntTotal.txt
         bamToFastq -i ${bam} -fq /dev/stdout |\
             cutadapt -e ${params.adapterER} -a ${params.adapter} -f fastq -o cutadapt.fastq - > cutadapt.${name}.err
-
     """
 }
 
@@ -127,7 +126,6 @@ process cutadapt {
 process fastq_sRBC_demultiplex {
 
   tag "Channel: ${name}"
-
   publishDir "${params.outdir}/fastq_demultiplex_sRBC", mode: 'copy'
 
   input:
@@ -148,7 +146,6 @@ process fastq_sRBC_demultiplex {
   '''
 }
 
-
 process fastq_sRBC_trim {
 
     tag "Channel: ${name}"
@@ -159,16 +156,15 @@ process fastq_sRBC_trim {
     set name, file(fastq) from fastq_split
 
     output:
-    set name, file("${name}.srbcTrim.err") into stat_srbcTrim
-    set name, file("*.fastq") into fastq_bc_splitTrimmed
+    set name, file("${name}_srbcTrim.err") into stat_srbcTrim
+    set name, file("${name}_srbc_trim.fastq") into fastq_bc_splitTrimmed
 
     script:
     """
     PYTHON_EGG_CACHE=`pwd` #cutadapt wants to write into home FIXME
     export PYTHON_EGG_CACHE
 
-    cutadapt -u -5 --minimum-length 20 -f fastq -o ${name}_srbc_trim.fastq ${fastq} > ${name}.srbcTrim.err
-
+    cutadapt -u -5 --minimum-length 20 -f fastq -o ${name}_srbc_trim.fastq ${fastq} > ${name}_srbcTrim.err
     """
 }
 
@@ -179,6 +175,7 @@ process fastq_sRBC_trim {
 process trimUMI {
 
     tag "Channel: ${name}"
+    publishDir "${params.outdir}/fastq_trimUMI", mode: 'copy'
 
     input:
         set name, file(fastq) from fastq_bc_splitTrimmed
@@ -191,7 +188,7 @@ process trimUMI {
     """
     cat ${fastq} |\
         paste - - - - |\
-        perl ${baseDir}/scripts/trim.pl -m ${params.minLength} -M ${params.maxLength} -5 ${params.trim5} -3 ${params.trim3} > trimmed.fastq
+        perl ${baseDir}/scripts/trim.pl -m ${params.minLength} -M ${params.maxLength} -trim5 ${params.trim5} -trim3 ${params.trim3} > trimmed.fastq
 
     cat trimmed.fastq | paste - - - - | wc -l > cntTrimmed.txt
     """
@@ -218,7 +215,7 @@ process trimSpike {
     """
     cat ${fastq} |\
         paste - - - - |\
-        perl ${baseDir}/scripts/trim.pl -m 13 -M 13 > spike.fastq
+        perl ${baseDir}/scripts/trim.pl -m 13 -M 13 -trim5 4 -trim3 4 > spike.fastq
 
     """
 }
