@@ -134,8 +134,8 @@ process fastq_sRBC_demultiplex {
     set name, file(fastq) from fastq_cutadapt
 
   output:
-    //set name, file("*.fastq") into fastq_split
-    file("*.fastq") into fastq_split
+    set name, file("*.fastq") into fastq_split
+    //file("*.fastq") into fastq_split
     set name, file("${name}.cnt_sRBC_demul.txt") into cnt_sRBC_split
 
   shell:
@@ -156,24 +156,24 @@ def ungroupTuple = {
     return result
 }
 
-fastq_split_test.subscribe {
-     println "Hello there !"
+fastq_split
+     .flatMap { it -> ungroupTuple(it) }
+     .filter { it[1].baseName =~ /^(?!.*_unmatched).*$/ }
      //.filter { it.baseName =~ /^(?!.*_unmatched).*$/ }
-     println it
-
-}
+     //.println {"Hello there !"}
+     //.println{ it }
+     .map { name, file -> tuple(file.name.replaceAll(/\.fastq/, ''), file) }
+     .set {fastq_split_clean}
 
 //fastq_split
     //.collectFile()/
     //.println{ it.text }
     //.subscribe { println it }
-    //.flatMap { it -> ungroupTuple(it) }
-    //.filter { it[1].baseName =~ /^(?!.*_unmatched).*$/ }
+
     //println
     //.flatMap { }
     //.filter { it.baseName =~ /^(?!.*_unmatched).*$/ }
-    //.map { name, file -> tuple(file.name.replaceAll(/\.fastq/, ''), file) }
-    //.set {fastq_split_clean}
+
 
 
 process fastq_sRBC_trim {
