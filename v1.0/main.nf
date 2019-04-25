@@ -26,7 +26,7 @@ log.info """\
          contamination: ${params.contamination}
          spikeIn: ${params.spikeIn}
          gtf: ${params.gtf}
-         gtfNoSplit: ${params.gtf}
+         gtfNoSplit: ${params.gtfNoSplit}
          tailFraction: ${params.tailFraction}
          cpus: ${params.cpus}
          memPerCPUSort: ${params.memPerCPUSort}

@@ -119,7 +119,6 @@ process cutadapt {
     """
 }
 
-
 /*
 * using the sRBC barcodes to demultiplex or verify samples
 */
