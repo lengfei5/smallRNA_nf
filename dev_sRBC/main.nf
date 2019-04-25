@@ -29,7 +29,7 @@ log.info """\
          contamination: ${params.contamination}
          spikeIn: ${params.spikeIn}
          gtf: ${params.gtf}
-         gtfNoSplit: ${params.gtf}
+         gtfNoSplit: ${params.gtfNoSplit}
          tailFraction: ${params.tailFraction}
          cpus: ${params.cpus}
          memPerCPUSort: ${params.memPerCPUSort}
@@ -73,7 +73,7 @@ if (params.gtfNoSplit)
   gtfNoSplit_file = file("NA")
 }
 
-if (! (params.gtf && params.gtfNoSplit))
+if (( ! params.gtf ) && ( ! params.gtfNoSplit ))
 {
   exit 1, "Neither --gtf nor --gtfNoSplit set"
 }
