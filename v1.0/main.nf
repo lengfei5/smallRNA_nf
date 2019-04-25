@@ -68,7 +68,7 @@ if (params.gtfNoSplit)
   gtfNoSplit_file = file("NA")
 }
 
-if (! (params.gtf && params.gtfNoSplit))
+if (( ! params.gtf ) && ( ! params.gtfNoSplit ))
 {
   exit 1, "Neither --gtf nor --gtfNoSplit set"
 }
@@ -112,7 +112,7 @@ process cutadapt {
 
         samtools view -c ${bam} > cntTotal.txt
         bamToFastq -i ${bam} -fq /dev/stdout |\
-            cutadapt -e ${params.adapterER} -a ${params.adapter} -f fastq -o cutadapt.fastq - > cutadapt.${name}.err
+            cutadapt -e ${params.adapterER} -a ${params.adapter} -f fastq --overlap 5 --discard-untrimmed -o cutadapt.fastq - > cutadapt.${name}.err
     """
 }
 
