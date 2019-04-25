@@ -119,20 +119,23 @@ process cutadapt {
     """
 }
 
+
 /*
 * using the sRBC barcodes to demultiplex or verify samples
 */
+
 process fastq_sRBC_demultiplex {
 
   tag "Channel: ${name}"
-  publishDir "${params.outdir}/fastq_demultiplex_sRBC", mode: 'copy'
+  publishDir "${params.outdir}/fastq_demultiplex_sRBC",  mode: 'copy'
 
   input:
     file bc_file from bc_file
     set name, file(fastq) from fastq_cutadapt
 
   output:
-    set name, file("*.fastq") into fastq_split
+    //set name, file("*.fastq") into fastq_split
+    file("*.fastq") into fastq_split
     set name, file("${name}.cnt_sRBC_demul.txt") into cnt_sRBC_split
 
   shell:
@@ -140,11 +143,37 @@ process fastq_sRBC_demultiplex {
     cat !{fastq} | fastx_barcode_splitter.pl --bcfile !{bc_file} --eol --exact --prefix !{name}_ --suffix .fastq
     cat !{fastq} | paste - - - - | wc -l > !{name}.cnt_sRBC_demul.txt
     cat $(ls *.fastq |grep unmatched) paste - - - - | wc -l >> !{name}.cnt_sRBC_demul.txt
-    rm $(ls *.fastq |grep unmatched)
 
   '''
 }
 
+//fastq_split.into { fastq_split_test; fastq_split_clean }
+
+def ungroupTuple = {
+    def result = []
+    def name = it[0]
+    it[1].each { result << [name, it] }
+    return result
+}
+
+fastq_split_test.subscribe {
+     println "Hello there !"
+     //.filter { it.baseName =~ /^(?!.*_unmatched).*$/ }
+     println it
+
+}
+
+//fastq_split
+    //.collectFile()/
+    //.println{ it.text }
+    //.subscribe { println it }
+    //.flatMap { it -> ungroupTuple(it) }
+    //.filter { it[1].baseName =~ /^(?!.*_unmatched).*$/ }
+    //println
+    //.flatMap { }
+    //.filter { it.baseName =~ /^(?!.*_unmatched).*$/ }
+    //.map { name, file -> tuple(file.name.replaceAll(/\.fastq/, ''), file) }
+    //.set {fastq_split_clean}
 
 
 process fastq_sRBC_trim {
@@ -154,7 +183,7 @@ process fastq_sRBC_trim {
     publishDir "${params.outdir}/fastq_sRBC_trim", mode: 'copy'
 
     input:
-    set name, file(fastq) from fastq_split
+    set name, file(fastq) from fastq_split_clean
 
     output:
     set name, file("${name}_srbcTrim.err") into stat_srbcTrim
