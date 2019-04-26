@@ -18,6 +18,7 @@ log.info """\
          outdir: ${params.outdir}
          reads: ${params.reads}
          adapter: ${params.adapter}
+         demultiplexWithsRBC: ${params.demultiplexWithsRBC}
          barcodes:${params.barcodes}
          adapterER: ${params.adapterER}
          trim5: ${params.trim5}
@@ -41,12 +42,20 @@ log.info """\
  * Input parameters validation
  */
 cont_file       = file(params.contamination)
-bc_file         = file(params.barcodes)
+
+if (params.demultiplexWithsRBC)
+{
+  if (params.barcodes) {
+    bc_file = file(params.barcodes)
+    if ( ! bc_file.exists() ) exit 1, "barcode file does not exist : ${bc_file}  "
+  } else {
+    exit 1, "barocde file missing"
+  }
+}
 
 if (params.spikeIn)
 {
   spikeIn_file = file(params.spikeIn)
-  //if( spikeIn_file.exists() ) println " spikeIn "
 }
 
 if (params.genome)

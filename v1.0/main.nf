@@ -383,7 +383,7 @@ process splitAndMergeGTF {
 
     output:
         file "splitAndMerged.gtf" into gtf_split
-	file "splitAndMerged.as.gtf" into gtf_split_as
+	      file "splitAndMerged.as.gtf" into gtf_split_as
 
     shell:
     '''
