@@ -18,6 +18,7 @@ log.info """\
          outdir: ${params.outdir}
          reads: ${params.reads}
          adapter: ${params.adapter}
+         adapterMin: ${params.adapterMin}
          demultiplexWithsRBC: ${params.demultiplexWithsRBC}
          barcodes:${params.barcodes}
          adapterER: ${params.adapterER}
@@ -124,7 +125,7 @@ process cutadapt {
 
         samtools view -c ${bam} > cntTotal.txt
         bamToFastq -i ${bam} -fq /dev/stdout |\
-            cutadapt -e ${params.adapterER} --overlap 5 --minimum-length 30 --discard-untrimmed -a ${params.adapter} -f fastq -o cutadapt.fastq - > cutadapt.${name}.err
+            cutadapt -e ${params.adapterER} -a ${params.adapter} -f fastq -o cutadapt.fastq -O ${params.adapterMin} --discard-untrimmed - > cutadapt.${name}.err
     """
 }
 
