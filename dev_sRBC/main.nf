@@ -113,7 +113,7 @@ process cutadapt {
         set val(name), file(bam) from read_files
 
     output:
-        set name, file("cutadapt.fastq") into fastq_cutadapt
+        set name, file("cutadapt.fastq") into fastq_cutadapt, fastq_cutadapt2
 	      set name, file("cutadapt.${name}.err") into stat_cutadapt
 	      set name, file("cntTotal.txt") into cnt_total
 
@@ -128,6 +128,28 @@ process cutadapt {
     """
 }
 
+/*
+*  make a conditional channel for no sRBC demultiplexing: just pass the fastq files with adapter cutted
+*/
+process skip_sRBCdemultiplex {
+
+  tag "Channel: ${name}"
+
+  when:
+  ! params.demultiplexWithsRBC
+
+  input:
+    set name, file(fastq) from fastq_cutadapt2
+
+  output:
+    set name, file("cutadapt.fastq") into fastq_skipDemultiplex
+
+  script:
+  """
+  echo 'Hello world!' > test.txt
+
+  """
+}
 
 /*
 *  sRBC demultiplexing part 1)  using the sRBC barcodes to demultiplex or verify samples
@@ -210,7 +232,7 @@ process trimUMI {
     publishDir "${params.outdir}/fastq_trimUMI", mode: 'copy'
 
     input:
-        set name, file(fastq) from fastq_bc_splitTrimmed
+        set name, file(fastq) from fastq_bc_splitTrimmed.mix(fastq_skipDemultiplex)
 
     output:
         set name, file("trimmed.fastq") into fastq_trimmed, fastq_trimmed2, fastq_for_spike
