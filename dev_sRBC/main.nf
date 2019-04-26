@@ -42,11 +42,11 @@ log.info """\
  * Input parameters validation
  */
 cont_file       = file(params.contamination)
+bc_file = file(params.barcodes)
 
 if (params.demultiplexWithsRBC)
 {
   if (params.barcodes) {
-    bc_file = file(params.barcodes)
     if ( ! bc_file.exists() ) exit 1, "barcode file does not exist : ${bc_file}  "
   } else {
     exit 1, "barocde file missing"
@@ -128,14 +128,17 @@ process cutadapt {
     """
 }
 
-/*
-* using the sRBC barcodes to demultiplex or verify samples
-*/
 
+/*
+*  sRBC demultiplexing part 1)  using the sRBC barcodes to demultiplex or verify samples
+*/
 process fastq_sRBC_demultiplex {
 
   tag "Channel: ${name}"
   publishDir "${params.outdir}/fastq_demultiplex_sRBC",  mode: 'copy'
+
+  when:
+  params.demultiplexWithsRBC
 
   input:
     file bc_file from bc_file
@@ -154,41 +157,31 @@ process fastq_sRBC_demultiplex {
 
   '''
 }
-
-//fastq_split.into { fastq_split_test; fastq_split_clean }
-
+/*
+* sRBC demultiplexing part 2) filter the demultiplexed fastq with fastx tookit, remove unmatched fastq files
+*/
 def ungroupTuple = {
     def result = []
     def name = it[0]
     it[1].each { result << [name, it] }
     return result
 }
-
 fastq_split
      .flatMap { it -> ungroupTuple(it) }
      .filter { it[1].baseName =~ /^(?!.*_unmatched).*$/ }
-     //.filter { it.baseName =~ /^(?!.*_unmatched).*$/ }
-     //.println {"Hello there !"}
-     //.println{ it }
      .map { name, file -> tuple(file.name.replaceAll(/\.fastq/, ''), file) }
      .set {fastq_split_clean}
 
-//fastq_split
-    //.collectFile()/
-    //.println{ it.text }
-    //.subscribe { println it }
-
-    //println
-    //.flatMap { }
-    //.filter { it.baseName =~ /^(?!.*_unmatched).*$/ }
-
-
-
+/*
+* sRBC demultiplexing part 3) trim the sRBC barcodes
+*/
 process fastq_sRBC_trim {
 
     tag "Channel: ${name}"
-
     publishDir "${params.outdir}/fastq_sRBC_trim", mode: 'copy'
+
+    when:
+    params.demultiplexWithsRBC
 
     input:
     set name, file(fastq) from fastq_split_clean
@@ -207,8 +200,9 @@ process fastq_sRBC_trim {
 }
 
 
+
 /*
- * Trim random nucleotides (UMI)
+ * Trim random nucleotides (UMI) either with or withou sRBC demultiplexing
  */
 process trimUMI {
 
@@ -231,7 +225,6 @@ process trimUMI {
     cat trimmed.fastq | paste - - - - | wc -l > cntTrimmed.txt
     """
 }
-
 
 
 /*
