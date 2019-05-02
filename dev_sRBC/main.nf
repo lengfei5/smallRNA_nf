@@ -611,7 +611,6 @@ process statTable {
     output:
         file "${name}.countStat.txt" into cnt_stat
 
-
     script:
     """
     echo -e "Name\tTotal\tPassed trimming\tContamination align\tGenome align\tTotal reads in feature" > ${name}.countStat.txt
@@ -647,10 +646,8 @@ process countTable {
     """
     cp $baseDir/scripts/countTable_UMI.Rmd ./countTable.Rmd
     R --slave -e "rmarkdown::render('countTable.Rmd')"
-
     """
 }
-
 
 workflow.onComplete {
     println "Pipeline completed at : $workflow.complete"

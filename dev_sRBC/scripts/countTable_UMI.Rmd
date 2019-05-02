@@ -29,7 +29,7 @@ tables <- lapply(cnt.files, function(f) {
     id2 <- gsub("-Threep", "-3p", id2)
     tmp <- cbind(tmp, miR=tmp[id, "Total"] > tmp[id2, "Total"] | is.na(tmp[id, "Total"] > tmp[id2, "Total"]))
     name <- sub("count/(.*).trimmed.clean.seqCnt.count.txt", "\\1", f)
-    colnames(tmp) <- c("Name", paste0(c("GM", "PM", "Total", "miR", "GM.UMInum", "PM.UMInum", "Total.UMInum", "GM.UMIfr", "PM.UMIfr", "Total.UMIfr"), ".", name))
+    colnames(tmp) <- c("Name", paste0(c("GM", "PM", "Total", "GM.UMInum", "PM.UMInum", "Total.UMInum", "GM.UMIfr", "PM.UMIfr", "Total.UMIfr", "miR"), ".", name))
     return(tmp)
 })
 
