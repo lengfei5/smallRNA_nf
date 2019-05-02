@@ -158,7 +158,7 @@ process skip_sRBCdemultiplex {
 process fastq_sRBC_demultiplex {
 
   tag "Channel: ${name}"
-  publishDir "${params.outdir}/fastq_demultiplex_sRBC",  mode: 'copy'
+  publishDir "${params.outdir}/fastq_demultiplex_trim_sRBC",  mode: 'copy'
 
   when:
   params.demultiplexWithsRBC
@@ -192,7 +192,8 @@ def ungroupTuple = {
 fastq_split
      .flatMap { it -> ungroupTuple(it) }
      .filter { it[1].baseName =~ /^(?!.*_unmatched).*$/ }
-     .map { name, file -> tuple(file.name.replaceAll(/\.fastq/, ''), file) }
+     //.map { name, file -> tuple(file.name.replaceAll(/\.fastq/, ''), file) }
+     .map { name, file -> tuple(name, file) } // only correct if there is one sRBC for each TRUSeq barcode
      .set {fastq_split_clean}
 
 /*
@@ -201,7 +202,7 @@ fastq_split
 process fastq_sRBC_trim {
 
     tag "Channel: ${name}"
-    publishDir "${params.outdir}/fastq_sRBC_trim", mode: 'copy'
+    publishDir "${params.outdir}/fastq_demultiplex_trim_sRBC", mode: 'copy'
 
     when:
     params.demultiplexWithsRBC
@@ -265,7 +266,7 @@ process trimSpike {
 
     output:
         set name, file("spike.fastq") into fastq_spike
-        //set name, file("cntTrimmed.txt") into cnt_trimmed
+        //set name, file("cntTrimmed.txt") into cnt_trimmed_spike
 
     script:
     """
@@ -545,7 +546,7 @@ process assignFeat {
 /*
  * Count feature (none hierarchical/no fixation)
  */
-process countSimple {
+process countSample {
 
     tag "Channel: ${name}"
 
@@ -584,6 +585,7 @@ process countSimple {
 
 //phase many channels: https://gitter.im/nextflow-io/nextflow/archives/2016/07/26
 /*
+* not used here
 cnt_total.phase(cnt_trimmed)
     .map { stat1, stat2 -> [stat1[0], stat1[1], stat2[1]] }
     .phase(bam_tailor_cont2)
