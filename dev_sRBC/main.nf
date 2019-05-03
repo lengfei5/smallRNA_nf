@@ -270,7 +270,6 @@ process trimSpike {
 
     output:
         set name, file("spike.fastq") into fastq_spike
-        //set name, file("cntTrimmed.txt") into cnt_trimmed_spike
 
     script:
     """
@@ -318,6 +317,7 @@ process alignSpike {
     output:
       set name, file("spike.bam") into bam_tailor_spike, bam_tailor_spike2
       file "${name}.spike.bam"
+      set name, file("cntSpikes.txt") into cnt_mapppedToSpike
 
     script:
     """
@@ -327,7 +327,7 @@ process alignSpike {
         touch spike.bam
     fi
     cp spike.bam ${name}.spike.bam
-
+    samtools view -c spike.bam > cntSpikes.txt
     """
 }
 /*
@@ -601,32 +601,33 @@ cnt_total.phase(cnt_trimmed)
     .set{cntStat_files}
 */
 // Short form of above
-cnt_total.concat(cnt_trimmed, bam_tailor_cont2, tailorStat, cnt_totalFeat)
+cnt_total.concat(cnt_cutadapt, cnt_sRBC_unmatched, cnt_trimmed, bam_tailor_cont2, tailorStat, cnt_totalFeat, cnt_mapppedToSpike)
     .groupTuple()
-    .map{ stat1, stat2 -> [stat1, stat2[0], stat2[1], stat2[2], stat2[3], stat2[4]] }
+    .map{ stat1, stat2 -> [stat1, stat2[0], stat2[1], stat2[2], stat2[3], stat2[4], stat2[5], stat2[6], stat2[7]] }
     .set{ cntStat_files }
-
 
 process statTable {
 
     tag "Channel: ${name}"
 
     input:
-        set name, file(cnt_total), file(cnt_trimmed), file(bam_tailor_cont), file(tailorStat), file(cnt_totalFeat) from cntStat_files
+        set name, file(cnt_total), file(cnt_cutadapt), file(cnt_sRBC_unmatched), file(cnt_trimmed), file(bam_tailor_cont), file(tailorStat), file(cnt_totalFeat), file(cnt_mapppedToSpike) from cntStat_files
 
     output:
         file "${name}.countStat.txt" into cnt_stat
 
     script:
     """
-    echo -e "Name\tTotal\tPassed trimming\tContamination align\tGenome align\tTotal reads in feature" > ${name}.countStat.txt
+    echo -e "Name\tTotal\tadaptorCutting\tsRBCunmatched\tUMItrimming\tContaminationAlign\tGenomeAlign\tTotalReadsInFeature\tREADsInSpikeIns" > ${name}.countStat.txt
     TOTAL=`cat ${cnt_total}`
-    TRIMMED=`cat ${cnt_trimmed}`
+    cntCutadapt=`cat ${cnt_cutadapt}`
+    sRBCunmatched=`cat ${cnt_sRBC_unmatched}`
+    UMItrimmed=`cat ${cnt_trimmed}`
     CONT=`samtools view ${bam_tailor_cont} | cut -f 1 | sort -u | wc -l`
     TAILOR=`cat ${tailorStat}`
     FEATURE=`cat ${cnt_totalFeat}`
-
-    echo -e "${name}\t\$TOTAL\t\$TRIMMED\t\$CONT\t\$TAILOR\t\$FEATURE" >> ${name}.countStat.txt
+    spikeIns=`cat ${cnt_mapppedToSpike}`
+    echo -e "${name}\t\$TOTAL\t\$cntCutadapt\t\$sRBCunmatched\t\$UMItrimmed\t\$CONT\t\$TAILOR\t\$FEATURE\t\$spikeIns" >> ${name}.countStat.txt
     """
 }
 
