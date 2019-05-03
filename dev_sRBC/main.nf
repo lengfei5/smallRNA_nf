@@ -117,6 +117,7 @@ process cutadapt {
         set name, file("cutadapt.fastq") into fastq_cutadapt, fastq_cutadapt2
 	      set name, file("cutadapt.${name}.err") into stat_cutadapt
 	      set name, file("cntTotal.txt") into cnt_total
+        set name, file("cnt_cutadapt.txt") into cnt_cutadapt
 
     script:
     """
@@ -126,6 +127,9 @@ process cutadapt {
         samtools view -c ${bam} > cntTotal.txt
         bamToFastq -i ${bam} -fq /dev/stdout |\
             cutadapt -e ${params.adapterER} -a ${params.adapter} -f fastq -o cutadapt.fastq -O ${params.adapterMin} --discard-untrimmed - > cutadapt.${name}.err
+
+        cat cutadapt.fastq | paste - - - - | wc -l > cnt_cutadapt.txt
+
     """
 }
 
@@ -170,13 +174,14 @@ process fastq_sRBC_demultiplex {
   output:
     set name, file("*.fastq") into fastq_split
     //file("*.fastq") into fastq_split
-    set name, file("${name}.cnt_sRBC_demul.txt") into cnt_sRBC_split
+    set name, file("${name}.cnt_sRBC_demul.txt") into cnt_sRBC_demul
+    set name, file("${name}.cnt_sRBC_unmatched.txt") into cnt_sRBC_unmatched
 
   shell:
   '''
     cat !{fastq} | fastx_barcode_splitter.pl --bcfile !{bc_file} --eol --exact --prefix !{name}_ --suffix .fastq
     cat !{fastq} | paste - - - - | wc -l > !{name}.cnt_sRBC_demul.txt
-    cat $(ls *.fastq |grep unmatched) paste - - - - | wc -l >> !{name}.cnt_sRBC_demul.txt
+    cat $(ls *.fastq |grep unmatched) paste - - - - | wc -l > !{name}.cnt_sRBC_unmatched.txt
 
   '''
 }
@@ -222,7 +227,6 @@ process fastq_sRBC_trim {
     cutadapt -u -5 --minimum-length 28 -f fastq -o ${name}_srbc_trim.fastq ${fastq} > ${name}_srbcTrim.err
     """
 }
-
 
 
 /*
