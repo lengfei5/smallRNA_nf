@@ -637,7 +637,7 @@ process statTable {
 process countTable {
 
     publishDir "${params.outdir}/result", mode: 'copy'
-
+    
     input:
         file "count/*" from count.collect()
         file "spikeIn/*" from spike_count.collect()
