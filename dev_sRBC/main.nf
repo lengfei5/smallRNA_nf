@@ -116,7 +116,8 @@ process cutadapt {
     output:
         set name, file("cutadapt.fastq") into fastq_cutadapt, fastq_cutadapt2
 	      set name, file("cutadapt.${name}.err") into stat_cutadapt
-	      set name, file("cntTotal.txt") into cnt_total
+
+        set name, file("cntTotal.txt") into cnt_total
         set name, file("cnt_cutadapt.txt") into cnt_cutadapt
 
     script:
@@ -199,8 +200,8 @@ def ungroupTuple = {
 fastq_split
      .flatMap { it -> ungroupTuple(it) }
      .filter { it[1].baseName =~ /^(?!.*_unmatched).*$/ }
-     //.map { name, file -> tuple(file.name.replaceAll(/\.fastq/, ''), file) }
-     .map { name, file -> tuple(name, file) } // only correct if there is one sRBC for each TRUSeq barcode
+     .map { name, file -> tuple(file.name.replaceAll(/\.fastq/, ''), file) } // here change the name after demultiplexing, because one input can have multiple demultiplexed files
+     //.map { name, file -> tuple(name, file) } // only correct if there is one sRBC for each TRUSeq barcode
      .set {fastq_split_clean}
 
 /*
@@ -604,6 +605,8 @@ cnt_total.phase(cnt_trimmed)
 */
 
 // Short form of above
+/*
+* The original version from Thomas Burkard
 cnt_total.concat(cnt_cutadapt, cnt_sRBC_unmatched, cnt_trimmed, bam_tailor_cont2, tailorStat, cnt_totalFeat, cnt_mapppedToSpike)
     .groupTuple()
     .map{ stat1, stat2 -> [stat1, stat2[0], stat2[1], stat2[2], stat2[3], stat2[4], stat2[5], stat2[6], stat2[7]] }
@@ -634,6 +637,65 @@ process statTable {
 
     """
 }
+*/
+
+// Short form of above but before demultiplexing
+cnt_total.concat(cnt_cutadapt, cnt_sRBC_unmatched)
+    .groupTuple()
+    .map{ stat1, stat2 -> [stat1, stat2[0], stat2[1], stat2[2]]}
+    .set{ cntStat_files_1 }
+
+process statTable_part1 {
+
+    tag "Channel: ${name}"
+    publishDir "${params.outdir}/stat_allSteps", mode: 'copy'
+
+    input:
+        set name, file(cnt_total), file(cnt_cutadapt), file(cnt_sRBC_unmatched) from cntStat_files_1
+
+    output:
+        file "${name}.countStat.txt" into cnt_stat_part1
+
+    script:
+    """
+    echo -e "Name\tTotal\tadaptorCutting\tsRBCunmatched" > ${name}.countStat.txt
+    TOTAL=`cat ${cnt_total}`
+    cntCutadapt=`cat ${cnt_cutadapt}`
+    sRBCunmatched=`cat ${cnt_sRBC_unmatched}`
+    echo -e "${name}\t\$TOTAL\t\$cntCutadapt\t\$sRBCunmatched" >> ${name}.countStat.txt
+
+    """
+}
+
+// Short form for after demultiplexing
+cnt_trimmed.concat(bam_tailor_cont2, tailorStat, cnt_totalFeat, cnt_mapppedToSpike)
+    .groupTuple()
+    .map{ stat1, stat2 -> [stat1, stat2[0], stat2[1], stat2[2], stat2[3], stat2[4]] }
+    .set{ cntStat_files_2 }
+
+process statTable_part2 {
+
+    tag "Channel: ${name}"
+    publishDir "${params.outdir}/stat_allSteps", mode: 'copy'
+
+    input:
+        set name, file(cnt_trimmed), file(bam_tailor_cont), file(tailorStat), file(cnt_totalFeat), file(cnt_mapppedToSpike) from cntStat_files_2
+
+    output:
+        file "${name}.countStat.txt" into cnt_stat_part2
+
+    script:
+    """
+    echo -e "Name\tUMItrimming\tContaminationAlign\tGenomeAlign\tTotalReadsInFeature\tREADsInSpikeIns" > ${name}.countStat.txt
+    UMItrimmed=`cat ${cnt_trimmed}`
+    CONT=`samtools view ${bam_tailor_cont} | cut -f 1 | sort -u | wc -l`
+    TAILOR=`cat ${tailorStat}`
+    FEATURE=`cat ${cnt_totalFeat}`
+    spikeIns=`cat ${cnt_mapppedToSpike}`
+    echo -e "${name}\t$UMItrimmed\t\$CONT\t\$TAILOR\t\$FEATURE\t\$spikeIns" >> ${name}.countStat.txt
+
+    """
+}
 
 /*
  * Big table of all samples
@@ -645,7 +707,8 @@ process countTable {
     input:
         file "count/*" from count.collect()
         file "spikeIn/*" from spike_count.collect()
-	      file "countStat/*" from cnt_stat.collect()
+	      file "countStat_1/*" from cnt_stat_part1.collect()
+        file "countStat_2/*" from cnt_stat_part2.collect()
 
     output:
         file "countTable.txt"
