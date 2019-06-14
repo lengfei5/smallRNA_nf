@@ -602,6 +602,7 @@ cnt_total.phase(cnt_trimmed)
     .map { stat1, stat2 -> [stat1[0], stat1[1], stat1[2], stat1[3], stat1[4], stat2[1]] }
     .set{cntStat_files}
 */
+
 // Short form of above
 cnt_total.concat(cnt_cutadapt, cnt_sRBC_unmatched, cnt_trimmed, bam_tailor_cont2, tailorStat, cnt_totalFeat, cnt_mapppedToSpike)
     .groupTuple()
