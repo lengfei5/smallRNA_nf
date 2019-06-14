@@ -179,7 +179,8 @@ process fastq_sRBC_demultiplex {
 
   shell:
   '''
-    cat !{fastq} | fastx_barcode_splitter.pl --bcfile !{bc_file} --eol --exact --prefix !{name}_ --suffix .fastq
+    cat !{bc_file} |grep !{name} |cut -f2,3 > barcode_file.txt
+    cat !{fastq} | fastx_barcode_splitter.pl --bcfile barcode_file.txt --eol --exact --prefix !{name}_ --suffix .fastq
     cat !{fastq} | paste - - - - | wc -l > !{name}.cnt_sRBC_demul.txt
     cat $(ls *.fastq |grep unmatched) paste - - - - | wc -l > !{name}.cnt_sRBC_unmatched.txt
 
@@ -628,6 +629,7 @@ process statTable {
     FEATURE=`cat ${cnt_totalFeat}`
     spikeIns=`cat ${cnt_mapppedToSpike}`
     echo -e "${name}\t\$TOTAL\t\$cntCutadapt\t\$sRBCunmatched\t\$UMItrimmed\t\$CONT\t\$TAILOR\t\$FEATURE\t\$spikeIns" >> ${name}.countStat.txt
+
     """
 }
 
@@ -637,7 +639,7 @@ process statTable {
 process countTable {
 
     publishDir "${params.outdir}/result", mode: 'copy'
-    
+
     input:
         file "count/*" from count.collect()
         file "spikeIn/*" from spike_count.collect()
