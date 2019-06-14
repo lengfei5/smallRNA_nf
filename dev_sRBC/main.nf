@@ -186,6 +186,7 @@ process fastq_sRBC_demultiplex {
 
   '''
 }
+
 /*
 * sRBC demultiplexing part 2) filter the demultiplexed fastq with fastx tookit, remove unmatched fastq files
 */
