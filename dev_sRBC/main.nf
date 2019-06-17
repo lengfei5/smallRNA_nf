@@ -197,6 +197,7 @@ def ungroupTuple = {
     it[1].each { result << [name, it] }
     return result
 }
+
 fastq_split
      .flatMap { it -> ungroupTuple(it) }
      .filter { it[1].baseName =~ /^(?!.*_unmatched).*$/ }
@@ -233,7 +234,7 @@ process fastq_sRBC_trim {
 
 
 /*
- * Trim random nucleotides (UMI) either with or withou sRBC demultiplexing
+ * Trim random nucleotides (UMI) either with or without sRBC demultiplexing
  */
 process trimUMI {
 
@@ -245,7 +246,7 @@ process trimUMI {
 
     output:
         set name, file("trimmed.fastq") into fastq_trimmed, fastq_trimmed2, fastq_for_spike
-        set name, file("cntTrimmed.txt") into cnt_trimmed
+        set name, file("${name}_cntUMItrimmed.txt") into cnt_umi_trimmed
 
     script:
     """
@@ -253,7 +254,7 @@ process trimUMI {
         paste - - - - |\
         perl ${baseDir}/scripts/trim.pl -m ${params.minLength} -M ${params.maxLength} -5 ${params.trim5} -3 ${params.trim3} > trimmed.fastq
 
-    cat trimmed.fastq | paste - - - - | wc -l > cntTrimmed.txt
+    cat trimmed.fastq | paste - - - - | wc -l > ${name}_cntUMItrimmed.txt
     """
 }
 
@@ -668,7 +669,7 @@ process statTable_part1 {
 }
 
 // Short form for after demultiplexing
-cnt_trimmed.concat(bam_tailor_cont2, tailorStat, cnt_totalFeat, cnt_mapppedToSpike)
+cnt_umi_trimmed.concat(bam_tailor_cont2, tailorStat, cnt_totalFeat, cnt_mapppedToSpike)
     .groupTuple()
     .map{ stat1, stat2 -> [stat1, stat2[0], stat2[1], stat2[2], stat2[3], stat2[4]] }
     .set{ cntStat_files_2 }
@@ -679,20 +680,20 @@ process statTable_part2 {
     publishDir "${params.outdir}/stat_allSteps", mode: 'copy'
 
     input:
-        set name, file(cnt_trimmed), file(bam_tailor_cont), file(tailorStat), file(cnt_totalFeat), file(cnt_mapppedToSpike) from cntStat_files_2
+        set name, file(cnt_umi_trimmed), file(bam_tailor_cont), file(tailorStat), file(cnt_totalFeat), file(cnt_mapppedToSpike) from cntStat_files_2
 
     output:
         file "${name}.countStat.txt" into cnt_stat_part2
 
     script:
     """
-    echo -e "Name\tUMItrimming\tContaminationAlign\tGenomeAlign\tTotalReadsInFeature\tREADsInSpikeIns" > ${name}.countStat.txt
-    UMItrimmed=`cat ${cnt_trimmed}`
+    cp ${cnt_umi_trimmed} cnt_umi_trimmed.txt
+    echo -e "Name\tcnt.umiTrimmed\tContaminationAlign\tGenomeAlign\tTotalReadsInFeature\tREADsInSpikeIns" > ${name}.countStat.txt
     CONT=`samtools view ${bam_tailor_cont} | cut -f 1 | sort -u | wc -l`
     TAILOR=`cat ${tailorStat}`
     FEATURE=`cat ${cnt_totalFeat}`
     spikeIns=`cat ${cnt_mapppedToSpike}`
-    echo -e "${name}\t$UMItrimmed\t\$CONT\t\$TAILOR\t\$FEATURE\t\$spikeIns" >> ${name}.countStat.txt
+    echo -e "${name}\t22\t\$CONT\t\$TAILOR\t\$FEATURE\t\$spikeIns" >> ${name}.countStat.txt
 
     """
 }
