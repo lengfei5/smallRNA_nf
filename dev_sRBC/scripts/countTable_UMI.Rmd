@@ -67,19 +67,49 @@ spike
 ```
 
 # Merge count statistics
-
 ```{r mergeCntStat}
-cntStat.files <- list.files(path = "countStat", pattern = "*.countStat.txt", full.names = TRUE)
-cntStat.tables <- lapply(cntStat.files, read.delim)
-cntStat <- Reduce('rbind', cntStat.tables)
 
-write.table(cntStat, file = "countStatTable.txt", sep = "\t", quote = F, row.names = F)
-cntStat
+cntStat1.files <- list.files(path = "countStat_part1", pattern = "*.countStat.txt", full.names = TRUE)
+cntStat1.tables <- lapply(cntStat1.files, read.delim)
+cntStat1 <- Reduce('rbind', cntStat1.tables)
+
+# write.table(cntStat1, file = "countStatTable.txt", sep = "\t", quote = F, row.names = F)
+#cntStat1
+
+cntStat2.files <- list.files(path = "countStat_part2", pattern = "*.countStat.txt", full.names = TRUE)
+cntStat2.tables <- lapply(cntStat2.files, read.delim)
+cntStat2 <- Reduce('rbind', cntStat2.tables)
+
+#cntStat2
+
+#stat1 = cntStat1
+#stat2 = cntStat2
+stat1 = data.frame(cntStat1, stringsAsFactors = FALSE)
+stat2 = data.frame(cntStat2, stringsAsFactors = FALSE)
+
+stat1
+stat2
+
+index1 = c()
+index2 = c()
+for(n in 1:nrow(stat1))
+{
+  kk = grep(as.character(stat1[n, 1]), as.character(stat2[, 1]))
+  index1 = c(index1, rep(n, length(kk)))
+  index2 = c(index2, kk)
+}
+
+stat.all = data.frame(stat1[index1, ], stat2[index2, ], stringsAsFactors = FALSE)
+#colnames(stat.all) = c(colnames(stat1), colnames(stat2))
+
+write.table(stat.all, file = "countStatTable.txt", sep = "\t", quote = F, row.names = F)
+
+stat.all
+
 ```
 
 
 # Session info
-
 ```{r sessionInfo}
 sessionInfo()
 ```

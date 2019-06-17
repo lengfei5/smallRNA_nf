@@ -688,12 +688,12 @@ process statTable_part2 {
     script:
     """
     echo -e "Name\tcnt.umiTrimmed\tContaminationAlign\tGenomeAlign\tTotalReadsInFeature\tREADsInSpikeIns" > ${name}.countStat.txt
-    cntUMI=`cat ${cnt_umi_trimmed}`
+    cntUMItrimmed=`cat ${cnt_umi_trimmed}`
     CONT=`samtools view ${bam_tailor_cont} | cut -f 1 | sort -u | wc -l`
     TAILOR=`cat ${tailorStat}`
     FEATURE=`cat ${cnt_totalFeat}`
     spikeIns=`cat ${cnt_mapppedToSpike}`
-    echo -e "${name}\t\$cntUMI\t\$CONT\t\$TAILOR\t\$FEATURE\t\$spikeIns" >> ${name}.countStat.txt 
+    echo -e "${name}\t\$cntUMItrimmed\t\$CONT\t\$TAILOR\t\$FEATURE\t\$spikeIns" >> ${name}.countStat.txt
 
     """
 }
@@ -708,8 +708,8 @@ process countTable {
     input:
         file "count/*" from count.collect()
         file "spikeIn/*" from spike_count.collect()
-	      file "countStat_1/*" from cnt_stat_part1.collect()
-        file "countStat_2/*" from cnt_stat_part2.collect()
+        file "countStat_part1/*" from cnt_stat_part1.collect()
+        file "countStat_part2/*" from cnt_stat_part2.collect()
 
     output:
         file "countTable.txt"
@@ -719,10 +719,9 @@ process countTable {
 
     script:
     """
-
     cp $baseDir/scripts/countTable_UMI.Rmd ./countTable.Rmd
-    R --slave -e "rmarkdown::render('countTable.Rmd')"
 
+    R --slave -e "rmarkdown::render('countTable.Rmd')"
     """
 }
 
