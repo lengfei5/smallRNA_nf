@@ -687,13 +687,13 @@ process statTable_part2 {
 
     script:
     """
-    cp ${cnt_umi_trimmed} cnt_umi_trimmed.txt
     echo -e "Name\tcnt.umiTrimmed\tContaminationAlign\tGenomeAlign\tTotalReadsInFeature\tREADsInSpikeIns" > ${name}.countStat.txt
+    cntUMI=`cat ${cnt_umi_trimmed}`
     CONT=`samtools view ${bam_tailor_cont} | cut -f 1 | sort -u | wc -l`
     TAILOR=`cat ${tailorStat}`
     FEATURE=`cat ${cnt_totalFeat}`
     spikeIns=`cat ${cnt_mapppedToSpike}`
-    echo -e "${name}\t22\t\$CONT\t\$TAILOR\t\$FEATURE\t\$spikeIns" >> ${name}.countStat.txt
+    echo -e "${name}\t\$cntUMI\t\$CONT\t\$TAILOR\t\$FEATURE\t\$spikeIns" >> ${name}.countStat.txt 
 
     """
 }
