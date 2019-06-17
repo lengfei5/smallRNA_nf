@@ -640,10 +640,10 @@ process statTable {
 }
 */
 
-// Short form of above but before demultiplexing
+// Short form of above before demultiplexing
 cnt_total.concat(cnt_cutadapt, cnt_sRBC_unmatched)
-    .groupTuple()
-    .map{ stat1, stat2 -> [stat1, stat2[0], stat2[1], stat2[2]]}
+    .groupTuple() // group channels by names here [sampleName, [cn_total, cnt_cutadapt, cnt_sRBC_unmatched]]
+    .map{ stat1, stat2 -> [stat1, stat2[0], stat2[1], stat2[2]]} // flatten the tuples and becomes [sampleName, cn_total, cnt_cutadapt, cnt_sRBC_unmatched]
     .set{ cntStat_files_1 }
 
 process statTable_part1 {
