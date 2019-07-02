@@ -402,6 +402,7 @@ process buildTailorIndexContamination {
 process alignContamination {
 
     tag "Channel: ${name}"
+    publishDir "${params.outdir}/contamination", mode: 'copy', pattern: '*_tailor_cont.bam'
 
     input:
       file index from index_tailor_cont
@@ -409,6 +410,7 @@ process alignContamination {
 
     output:
       set name, file("contamination.bam") into bam_tailor_cont, bam_tailor_cont2
+      file "${name}_tailor_cont.bam"
 
     script:
     """
@@ -417,6 +419,8 @@ process alignContamination {
     else
         touch contamination.bam
     fi
+    cp contamination.bam ${name}_tailor_cont.bam
+
     """
 }
 
