@@ -415,7 +415,7 @@ process alignContamination {
     script:
     """
     if [ -e index.tailor.cont.t_bwt.bwt ]; then
-        tailor_v1.1_linux_static map -i ${fastq} -p index.tailor.cont -l ${params.minAlign}  -n ${task.cpus} | samtools view -bS > contamination.bam
+        tailor_v1.1_linux_static map -i ${fastq} -p index.tailor.cont -l 21  -n ${task.cpus} | samtools view -bS > contamination.bam
     else
         touch contamination.bam
     fi
