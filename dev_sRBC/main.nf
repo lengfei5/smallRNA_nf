@@ -183,7 +183,7 @@ process fastq_sRBC_demultiplex {
     cat !{bc_file} |grep !{name} |cut -f2,3 > barcode_file.txt
     cat !{fastq} | fastx_barcode_splitter.pl --bcfile barcode_file.txt --eol --exact --prefix !{name}_ --suffix .fastq
     cat !{fastq} | paste - - - - | wc -l > !{name}.cnt_sRBC_demul.txt
-    cat $(ls *.fastq |grep unmatched) paste - - - - | wc -l > !{name}.cnt_sRBC_unmatched.txt
+    cat (ls *.fastq |grep unmatched) | paste - - - - | wc -l > !{name}.cnt_sRBC_unmatched.txt
 
   '''
 }
