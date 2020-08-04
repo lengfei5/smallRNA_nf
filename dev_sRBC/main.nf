@@ -239,7 +239,7 @@ process fastq_sRBC_trim {
 process trimUMI {
 
     tag "Channel: ${name}"
-    publishDir "${params.outdir}/fastq_trimUMI", mode: 'copy'
+    publishDir "${params.outdir}/fastq_trimUMI", mode: 'copy', pattern: '*_cntUMItrimmed.txt'
 
     input:
         set name, file(fastq) from fastq_bc_splitTrimmed.mix(fastq_skipDemultiplex)
