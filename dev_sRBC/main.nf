@@ -57,7 +57,9 @@ if (params.demultiplexWithsRBC)
 if (params.spikeIn)
 {
   spikeIn_file = file(params.spikeIn)
-}
+}else{
+  spikeIn_file = file("NA")
+}​ // fixed bug reported by Maria ​​​​
 
 if (params.genome)
 {
