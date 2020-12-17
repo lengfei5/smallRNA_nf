@@ -462,6 +462,7 @@ process cleanReads {
 process align {
 
     tag "Channel: ${name}"
+    publishDir "${params.outdir}/aligned_bams", mode: 'copy', pattern: '*_mapped_with_tailor.bam'
 
     input:
 	   file index from index_tailor
@@ -469,10 +470,13 @@ process align {
 
     output:
       set name, file("tailor.bam") into bam_tailor, bam_tailor2
+      file "${name}_tailor_cont.bam"
 
     script:
     """
     tailor_v1.1_linux_static map -i ${fastq} -p index.tailor -l ${params.minAlign} -n ${task.cpus} | perl $baseDir/scripts/bam.NH2fraction.pl -m ${params.maxMultialign} | samtools view -bS > tailor.bam
+    cp contamination.bam ${name}_tailor_cont.bam
+
     """
 }
 
