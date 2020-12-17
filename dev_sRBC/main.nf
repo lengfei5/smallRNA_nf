@@ -54,12 +54,15 @@ if (params.demultiplexWithsRBC)
   }
 }
 
+
+// fix a bug found by Maria
 if (params.spikeIn)
 {
   spikeIn_file = file(params.spikeIn)
-}else{
+} else {
   spikeIn_file = file("NA")
-}​ // fixed bug reported by Maria ​​​​
+}
+
 
 if (params.genome)
 {
@@ -470,12 +473,12 @@ process align {
 
     output:
       set name, file("tailor.bam") into bam_tailor, bam_tailor2
-      file "${name}_tailor_cont.bam"
+      file "${name}_mapped_with_tailor.bam"
 
     script:
     """
     tailor_v1.1_linux_static map -i ${fastq} -p index.tailor -l ${params.minAlign} -n ${task.cpus} | perl $baseDir/scripts/bam.NH2fraction.pl -m ${params.maxMultialign} | samtools view -bS > tailor.bam
-    cp contamination.bam ${name}_tailor_cont.bam
+    cp tailor.bam ${name}_mapped_with_tailor.bam
 
     """
 }
